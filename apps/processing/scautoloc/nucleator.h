@@ -41,9 +41,7 @@ class Nucleator
 
 	public:
 		virtual bool feed(const Pick *pick) = 0;
-		const OriginVector &newOrigins() {
-			return _newOrigins;
-		}
+		const OriginVector &newOrigins() const;
 
 		virtual int  cleanup(const Time& minTime) = 0;
 		virtual void reset() = 0;
@@ -76,12 +74,14 @@ class GridSearch : public Nucleator
 		virtual bool init();
 
 	public:
-		// Configuration parameters controlling the behaviour of the Nucleator
+		// Configuration parameters controlling the behaviour
+		// of the Nucleator
 		struct Config {
 			// minimum number of stations for new origin
 			int nmin{5};
 		
-			// maximum distance of stations contributing to new origin
+			// maximum distance of stations contributing to
+			// a new origin
 			double dmax{180.0};
 
 			// configurable multiplier, 0 means it is ignored
@@ -98,8 +98,10 @@ class GridSearch : public Nucleator
 
 	public:
 		void setStation(const Station *station);
+
 		const Config &config() const { return _config; }
 		void setConfig(const Config &config) { _config = config; }
+
 		bool setGridFile(const std::string &gridfile);
 
 		void setLocatorProfile(const std::string &profile);
@@ -143,66 +145,77 @@ class GridSearch : public Nucleator
 		Config  _config;
 };
 
+
+
 // From a GridPoint point of view, a station has a
 // distance, azimuth, traveltime etc. These are stored
 // in StationWrapper, together with the corresponding
 // StationPtr.
 DEFINE_SMARTPOINTER(StationWrapper);
-class StationWrapper  : public Seiscomp::Core::BaseObject {
-public:
-	StationWrapper(const Station *station, const std::string &phase, float distance, float azimuth, float ttime, float hslow)
+
+class StationWrapper : public Seiscomp::Core::BaseObject {
+
+	public:
+		StationWrapper(const Station *station, const std::string &phase, float distance, float azimuth, float ttime, float hslow)
 		:  station(station), distance(distance), azimuth(azimuth), ttime(ttime), hslow(hslow), phase(phase)  {}
-	StationWrapper(const StationWrapper &other) {
-		station     = other.station;
-		phase       = other.phase;
-		distance    = other.distance;
-		azimuth     = other.azimuth;
-		ttime       = other.ttime;
-		hslow       = other.hslow;
-//			vslow       = other.vslow;
-//			backazimuth = other.backazimuth;
-	}
-	// Since there will be of the order
-	// 10^5 ... 10^6 StationWrapper's,
-	// we need to use floats
-	const Station *station;
-	float distance, azimuth; //, backazimuth;
-	float ttime, hslow; //, vslow;
-	// to further save space, make this a
-	// pointer to a static phase list entry:
-	std::string phase;
+
+		StationWrapper(const StationWrapper &other) {
+			station     = other.station;
+			phase       = other.phase;
+			distance    = other.distance;
+			azimuth     = other.azimuth;
+			ttime       = other.ttime;
+			hslow       = other.hslow;
+			// vslow       = other.vslow;
+			// backazimuth = other.backazimuth;
+		}
+
+		// Since there will be of the order
+		// 10^5 ... 10^6 StationWrapper's,
+		// we need to use floats
+		const Station *station;
+		float distance, azimuth; //, backazimuth;
+		float ttime, hslow; //, vslow;
+		// to further save space, make this a
+		// pointer to a static phase list entry:
+		std::string phase;
 };
+
+
 
 // A Pick projected in back time, corresponding
 // to the grid point location
 //DEFINE_SMARTPOINTER(ProjectedPick);
 //class ProjectedPick : public Seiscomp::Core::BaseObject {
 class ProjectedPick {
-public:
-	ProjectedPick(const Time &t);
-	ProjectedPick(PickCPtr p, StationWrapperCPtr w);
-	ProjectedPick(const ProjectedPick&);
-	~ProjectedPick();
 
-	static int count();
+	public:
+		ProjectedPick(const Time &t);
+		ProjectedPick(PickCPtr p, StationWrapperCPtr w);
+		ProjectedPick(const ProjectedPick&);
+		~ProjectedPick();
 
-	bool operator<(const ProjectedPick &p) const {
-		return (this->projectedTime() < p.projectedTime()); }
-	bool operator>(const ProjectedPick &p) const {
-		return (this->projectedTime() > p.projectedTime()); }
+		static int count();
+
+		bool operator<(const ProjectedPick &p) const {
+			return (this->projectedTime() < p.projectedTime()); }
+		bool operator>(const ProjectedPick &p) const {
+			return (this->projectedTime() > p.projectedTime()); }
 
 
-	Time projectedTime() const { return _projectedTime; }
+		Time projectedTime() const { return _projectedTime; }
 
-	Time _projectedTime;
-	PickCPtr p;
-	StationWrapperCPtr wrapper;
+	// private:
+		PickCPtr p;
+		StationWrapperCPtr wrapper;
+	private:
+		Time _projectedTime;
 };
+
+
 
 class GridPoint : public Hypocenter
 {
-	public:
-
 	public:
 		// normal grid point
 		GridPoint(double latitude, double longitude, double depth);
@@ -222,7 +235,7 @@ class GridPoint : public Hypocenter
 		int cleanup(const Time& minTime);
 
 	public:
-//		void setStations(const StationMap *stations);
+		// void setStations(const StationMap *stations);
 
 		bool setupStation(const Station *station);
 
@@ -238,9 +251,10 @@ class GridPoint : public Hypocenter
 
 	private:
 		std::map<std::string, StationWrapperCPtr> _wrappers;
-		std::multiset<ProjectedPick>          _picks;
+		std::multiset<ProjectedPick> _picks;
 		OriginPtr _origin;
 };
+
 
 double originScore(const Origin *origin, double maxRMS=3.5, double radius=0.);
 

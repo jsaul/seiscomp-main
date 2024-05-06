@@ -51,6 +51,12 @@ void Nucleator::setStation(const Station *station)
 	_stations.insert(StationMap::value_type(key, station));
 }
 
+
+const OriginVector &Nucleator::newOrigins() const {
+	return _newOrigins;
+}
+
+
 void GridSearch::setStation(const Station *station)
 {
 	Nucleator::setStation(station);
@@ -150,6 +156,7 @@ GridPoint::GridPoint(const Origin &origin)
 const Origin*
 GridPoint::feed(const Pick* pick)
 {
+// return nullptr; // TEMP XXX FIXME
 	// find the station corresponding to the pick
 	const std::string key = station_key(pick->station());
 
@@ -525,7 +532,7 @@ bool GridSearch::feed(const Pick *pick)
 
 	// link pick to station through pointer
 
-	if (pick->station() == 0) {
+	if ( ! pick->station()) {
 		StationMap::const_iterator it = _stations.find(net_sta);
 		if (it == _stations.end()) {
 			SEISCOMP_ERROR_S("\nGridSearch::feed() NO STATION " + net_sta + "\n");
@@ -581,9 +588,6 @@ bool GridSearch::feed(const Pick *pick)
 			// this is actually an unexpected condition!
 			continue;
 
-		if(track)
-		SEISCOMP_ERROR_S("GGG "+printOneliner(origin));
-
 		const PickSet pickSet = originPickSet(origin);
 		// test if we already have an origin with this particular pick set
 		if (pickSetOriginMap.find(pickSet) != pickSetOriginMap.end()) {
@@ -635,7 +639,6 @@ bool GridSearch::feed(const Pick *pick)
 // XXX XXX XXX XXX XXX
 
 		_relocator.useFixedDepth(true); // XXX vorher true
-//SEISCOMP_DEBUG("RELOCATE nucleator.cpp 724");
 		OriginPtr relo = _relocator.relocate(origin);
 		if ( !relo ) {
 			continue;
@@ -675,7 +678,6 @@ bool GridSearch::feed(const Pick *pick)
 	OriginPtr best = bestOrigin(tempOrigins);
 	if ( best ) {
 		_relocator.useFixedDepth(false);
-//SEISCOMP_DEBUG("RELOCATE nucleator.cpp 762");
 		OriginPtr relo = _relocator.relocate(best.get());
 		if ( relo ) {
 			_newOrigins.push_back(relo);
@@ -732,76 +734,4 @@ void GridSearch::setup()
 //	_relocator.setStations(_stations);
 }
 
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-		TravelTimeList *ttlist = ttt.compute(
-			_latitude, _longitude, _depth, slat, slon, salt);
-
-		TravelTime tt;
-		for (TravelTimeList::iterator it = ttlist->begin();
-		     it != ttlist->end(); ++it) {
-			tt = *it;
-			if (delta < 114)
-			// for  distances < 114, allways take 1st arrival
-				break;
-			if (tt.phase == "Pdiff")
-			// for  distances >= 114, skip Pdiff, take next
-				continue;
-			break;
-		}
-		delete ttlist;
-*/
+} // namespace Autoloc

@@ -79,6 +79,7 @@ Associator::shutdown()
 }
 
 
+
 bool
 Associator::feed(const Pick* pick)
 {
@@ -91,10 +92,9 @@ Associator::feed(const Pick* pick)
 
 	int count = 0;
 
-	for(OriginVector::const_iterator
-	    it=_origins->begin(); it != _origins->end(); ++it) {
+	for (const OriginPtr &_origin : *_origins) {
 
-		const Origin  *origin = (*it).get();
+		const Origin  *origin = _origin.get();
 		const Station *station = pick->station();
 
 		double delta, az, baz;
@@ -108,10 +108,7 @@ Associator::feed(const Pick* pick)
 		// score. => Anything can be associated with it.
 		double origin_score = origin->imported ? 1000 : origin->score;
 
-		for(vector<Phase>::iterator
-		    it = _phases.begin(); it != _phases.end(); ++it) {
-
-			const Phase &phase = *it;
+		for (const Phase &phase : _phases) {
 
 			// TODO: make this configurable
 //			if (origin->definingPhaseCount() < (phase.code=="P" ? 8 : 30))
@@ -124,31 +121,28 @@ Associator::feed(const Pick* pick)
 			double ttime = -1, x = 1;
 
 			if (phase.code == "P") {
-				for (Seiscomp::TravelTimeList::iterator
-				     it = ttlist->begin(); it != ttlist->end(); ++it) {
-
-					const Seiscomp::TravelTime &tt = *it;
+				for (const auto &tt: *ttlist) {
 					if (delta < 114) {
-						// for  distances < 114, allways take 1st arrival
+						// for delta < 114,
+						// always take 1st arrival
 						ttime = tt.time;
 						break;
 					}
 					if (tt.phase.substr(0,2) != "PK")
-						// for distances >= 114, skip Pdiff etc., take first
-						// PKP*, PKiKP*
+						// for delta >= 114,
+						// skip Pdiff etc.,
+						// take first of PKP*, PKiKP*
 						continue;
+
 					ttime = tt.time;
 					break;
 				}
-				// Weight residuals at regional distances "a bit" lower
-				// This is quite hackish!
+				// Weight residuals at regional distances
+				// "a bit" lower. This is quite hackish!
 				x = 1 + 0.6*exp(-0.003*delta*delta) + 0.5*exp(-0.03*(15-delta)*(15-delta));
 			}
 			else {
-				for (Seiscomp::TravelTimeList::iterator
-				     it = ttlist->begin(); it != ttlist->end(); ++it) {
-
-					const Seiscomp::TravelTime &tt = *it;
+				for (const auto &tt: *ttlist) {
 					if (tt.phase.substr(0, phase.code.size()) == phase.code) {
 						ttime = tt.time;
 						break;

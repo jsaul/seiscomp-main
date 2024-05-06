@@ -25,13 +25,9 @@
 #include <seiscomp/datamodel/origin.h>
 
 
-//#include <seiscomp/seismology/locsat.h>
-
-// #include "nucleator.h"
-
 namespace Autoloc {
 
-typedef unsigned long OriginID;
+typedef std::size_t OriginID;
 typedef double Time;
 
 DEFINE_SMARTPOINTER(Station);

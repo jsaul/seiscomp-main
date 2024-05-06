@@ -2808,20 +2808,16 @@ void Autoloc3::cleanup(Time minTime)
 	int beforePickCount   = Pick::count();
 	int beforeOriginCount = Origin::count();
 
-	for(PickMap::iterator
-	    it = _pick.begin(); it != _pick.end(); ) {
-
-		PickCPtr pick = (*it).second;
-		if (pick->time < minTime)
-			_pick.erase(it++);
-		else ++it;
+	PickMap _picksTmp;
+	for (auto &pick : _pick) {
+		if (pick.second->time < minTime)
+			continue;
+		_picksTmp[pick.first] = pick.second;
 	}
+	_pick = _picksTmp;
 
 	OriginVector _originsTmp;
-	for(OriginVector::iterator
-	    it = _origins.begin(); it != _origins.end(); ++it) {
-
-		OriginPtr origin = *it;
+	for (OriginPtr origin : _origins) {
 
 		if (origin->time < minTime)
 			continue;
@@ -2831,27 +2827,23 @@ void Autoloc3::cleanup(Time minTime)
 	_origins = _originsTmp;
 
 
-	vector<OriginID> ids;
-	for (map<int, OriginPtr>::iterator
-	     it = _lastSent.begin(); it != _lastSent.end(); ++it) {
-
-		const Origin *origin = (*it).second.get();
+	vector<OriginID> ids;  // origins to remove
+	for (auto& item: _lastSent) {
+		const Origin *origin = item.second.get();
 		if (origin->time < minTime)
 			ids.push_back(origin->id);
 	}
-
-	for(vector<OriginID>::iterator
-	    it = ids.begin(); it != ids.end(); ++it) {
-
-		OriginID id = *it;
+	for (OriginID id : ids) {
 		_lastSent.erase(id);
 	}
 
-	int nclean = _nucleator.cleanup(minTime);
+	size_t nclean = _nucleator.cleanup(minTime);
 	SEISCOMP_INFO("CLEANUP: Nucleator:  %ld items removed", nclean);
 	_nextCleanup = now() + _config.cleanupInterval;
 	SEISCOMP_INFO("CLEANUP ********** pick count   = %d/%d (%d)", beforePickCount,   Pick::count(), _pick.size());
+	SEISCOMP_INFO("CLEANUP ********** pick blacklist = %d", _blacklist.size());
 	SEISCOMP_INFO("CLEANUP ********** origin count = %d/%d (%d)", beforeOriginCount, Origin::count(), _origins.size());
+
 	dumpState();
 }
 
