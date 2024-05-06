@@ -40,7 +40,7 @@ Pick::Pick()
 	id = "";
 //	orid1 = orid2 = 0;
 	_station = NULL;
-	_origin = NULL;
+	_originID = 0;
 }
 
 Pick::Pick(const Pick &other)
@@ -55,13 +55,15 @@ Pick::Pick(const std::string &id, const std::string &net, const std::string &sta
 	amp = snr = per = 0;
 	xxl = false;
 	_station = NULL;
-	_origin = NULL;
+	_originID = 0;
 	mode = Automatic;
 	_pickCount++;
 }
 
 Pick::~Pick()
 {
+	_station = NULL;
+	_originID = 0;
 	_pickCount--;
 }
 
@@ -75,9 +77,9 @@ void Pick::setStation(const Station *sta) const
 	_station = (Station*)sta;
 }
 
-void Pick::setOrigin(const Origin *org) const
+void Pick::setOrigin(OriginID id) const
 {
-	_origin = (Origin*)org;
+	_originID = id;
 }
 
 
@@ -89,12 +91,6 @@ Arrival::Arrival(const Pick *pick, const std::string &phase, double residual)
 	ascore = dscore = tscore = 0;
 }
 
-Arrival::Arrival(const Arrival &other)
-{
-	*this = other;
-	this->pick = other.pick;
-	this->origin = other.origin;
-}
 
 Arrival::Arrival(const Origin *origin, const Pick *pick, const std::string &phase, double residual, double affinity)
 	: origin(origin), pick(pick), phase(phase), residual(residual), affinity(affinity)
@@ -188,7 +184,7 @@ bool Origin::add(const Arrival &arr)
 		return false;
 	}
 
-	arr.pick->setOrigin(this);
+	arr.pick->setOrigin(id);
 	arrivals.push_back(arr);
 	return true;
 }

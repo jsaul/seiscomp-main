@@ -82,8 +82,8 @@ class Pick : public Seiscomp::Core::BaseObject {
 	void setStation(const Station *sta) const;
 
 	// get and set the origin this pick is associated with
-	const Origin *origin() const { return _origin.get(); }
-	void setOrigin(const Origin *org) const;
+	const OriginID origin() const { return _originID; }
+	void setOrigin(OriginID id) const;
 
 	Time time;		// pick time
 	float amp;		// linear amplitude
@@ -97,8 +97,12 @@ class Pick : public Seiscomp::Core::BaseObject {
 	Seiscomp::Core::BaseObjectCPtr attachment;
 
   private:
-	mutable OriginPtr  _origin; // The (one and only) origin this pick is associated to
-	mutable StationPtr _station;	// Station information
+	// The (one and only) origin this pick is associated to.
+	// Need to be able to re-associate the pick to another origin.
+	mutable OriginID _originID;
+
+	// Station information
+	mutable StationPtr _station;
 };
 
 
@@ -120,9 +124,9 @@ class Arrival {
 
 	Arrival(const Pick *pick, const std::string &phase="P", double residual=0);
 	Arrival(const Origin *origin, const Pick *pick, const std::string &phase="P", double residual=0, double affinity=1);
-	Arrival(const Arrival &);
+	Arrival(const Arrival &) = default;
 
-	OriginCPtr origin;
+	const Origin* origin;
 	PickCPtr pick;
 	std::string phase;
 	float residual;
@@ -132,7 +136,6 @@ class Arrival {
 	float affinity;
 	float score;
 
-	// XXX temporary:
 	float dscore, ascore, tscore;
 
 	// Reasons for why a pick may be excluded from the computation of an

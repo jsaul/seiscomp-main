@@ -651,9 +651,9 @@ bool Autoloc3::_tooManyRecentPicks(const Pick *newPick) const
 		if (dt < 0 || dt > timeSpan)
 			continue;
 
-/*		if ( newPick->origin() )  // associated?
+		if ( newPick->origin() )  // associated?
 			continue;
-*/
+
 		double snr = oldPick->snr;
 		if (snr > 15)  snr = 15;
 		if (snr <  3)  snr =  3;
@@ -1020,7 +1020,7 @@ OriginPtr Autoloc3::_tryAssociate(const Pick *pick)
 	     it=associations.begin(); it!=associations.end(); ++it) {
 
 		const Association &asso = (*it);
-		SEISCOMP_INFO_S("     " + printOneliner(asso.origin.get()) + "  ph="+asso.phase);
+		SEISCOMP_INFO_S("     " + printOneliner(asso.origin) + "  ph="+asso.phase);
 		SEISCOMP_INFO  ("     aff=%.2f res=%.2f", asso.affinity, asso.residual);
 	}
 
@@ -1035,7 +1035,7 @@ OriginPtr Autoloc3::_tryAssociate(const Pick *pick)
 		const Association &asso = (*it);
 		if ( ! (asso.origin->imported))
 			continue;
-		OriginPtr associatedOrigin = new Origin(*asso.origin.get());
+		OriginPtr associatedOrigin = new Origin(*asso.origin);
 
 		bool success = _associate(associatedOrigin.get(), pick, asso.phase);
 		if ( ! success)
@@ -1062,7 +1062,7 @@ OriginPtr Autoloc3::_tryAssociate(const Pick *pick)
 	     it = associations.begin(); it != associations.end(); ++it) {
 
 		const Association &asso = (*it);
-		OriginPtr associatedOrigin = new Origin(*asso.origin.get());
+		OriginPtr associatedOrigin = new Origin(*asso.origin);
 
 		// this is the main criteria
 		if (asso.affinity < _config.minPickAffinity)
@@ -2165,8 +2165,8 @@ bool Autoloc3::_addMorePicks(Origin *origin, bool keepDepth)
 			continue;
 		if (_blacklisted(pick))
 			continue;
-		if (pick->origin()) // associated to another origin?
-			continue;
+//		if (pick->origin()) // associated to another origin?
+//			continue;
 		if ( ! _associate(origin, pick, "P") &&
 		     ! _associate(origin, pick, "PKP"))
 			continue;
@@ -2554,7 +2554,7 @@ int Autoloc3::_removeWorstOutliers(Origin *origin)
 
 		if (arr.excluded && fabs(arr.residual) > _config.maxResidualKeep) {
 
-			arr.pick->setOrigin(NULL); // disassociate the pick
+			arr.pick->setOrigin(0); // disassociate the pick
 			removed.push_back(arr.pick->id);
 			it = origin->arrivals.erase(it);
 			count++;
@@ -2796,7 +2796,8 @@ void Autoloc3::shutdown()
 void Autoloc3::cleanup(Time minTime)
 {
 	if ( ! minTime) {
-		minTime = now() - _config.maxAge - 1800;
+		double extra = 1800; // extra time to add to maxAge
+		minTime = now() - (_config.maxAge + extra);
 
 		if (now() < _nextCleanup)
 			return;
@@ -2815,12 +2816,6 @@ void Autoloc3::cleanup(Time minTime)
 			_pick.erase(it++);
 		else ++it;
 	}
-
-	int nclean = _nucleator.cleanup(minTime);
-	SEISCOMP_INFO("CLEANUP: Nucleator: %d items removed", nclean);
-	_nextCleanup = now() + _config.cleanupInterval;
-	SEISCOMP_INFO("CLEANUP ********** pick count   = %d/%d", beforePickCount,Pick::count());
-	SEISCOMP_INFO("CLEANUP ********** origin count = %d/%d", beforeOriginCount,Origin::count());
 
 	OriginVector _originsTmp;
 	for(OriginVector::iterator
@@ -2851,6 +2846,12 @@ void Autoloc3::cleanup(Time minTime)
 		OriginID id = *it;
 		_lastSent.erase(id);
 	}
+
+	int nclean = _nucleator.cleanup(minTime);
+	SEISCOMP_INFO("CLEANUP: Nucleator:  %ld items removed", nclean);
+	_nextCleanup = now() + _config.cleanupInterval;
+	SEISCOMP_INFO("CLEANUP ********** pick count   = %d/%d (%d)", beforePickCount,   Pick::count(), _pick.size());
+	SEISCOMP_INFO("CLEANUP ********** origin count = %d/%d (%d)", beforeOriginCount, Origin::count(), _origins.size());
 	dumpState();
 }
 
