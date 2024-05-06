@@ -356,11 +356,11 @@ bool Autoloc3::feed(const Pick *pick)
 	}
 
 	// A previous version of the new pick might have been updated in _store();
-	if ( ! _process( Autoloc3::pick(pick->id) ))
-		return false;
-
-	report();
+	bool status = _process( Autoloc3::pick(pick->id));
 	cleanup();
+	if (! status)
+		return false;
+	report();
 
 	return true;
 }
