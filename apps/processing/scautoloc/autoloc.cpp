@@ -1903,7 +1903,6 @@ bool Autoloc3::_store(Origin *origin)
 
 	if ( origin->imported ) { // FIXME
 		SEISCOMP_INFO_S(" IMP " + printOneliner(origin));
-		// TODO: Grab all matching picks for this origin
 		_addMorePicks(origin);
 	}
 	else _updateScore(origin);
@@ -1912,9 +1911,10 @@ bool Autoloc3::_store(Origin *origin)
 	if (depthPhaseCount(origin))
 		origin->depthType = Origin::DepthPhases;
 
-	Origin *existing = _origins.find(origin->id);
+	Origin *existing = origin->id ?_origins.find(origin->id) : nullptr;
 	if (existing) {
 		existing->updateFrom(origin);
+		delete origin;
 		origin = existing;
 		SEISCOMP_INFO_S(" UPD " + printOneliner(origin));
 	}
