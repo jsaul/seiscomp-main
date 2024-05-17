@@ -57,9 +57,10 @@ static int arrivalWithLargestResidual(const Origin *origin)
 	for (int i=0; i<arrivalCount; i++) {
 
 		const Arrival &arr = origin->arrivals[i];
-		if (arr.excluded) continue;
+		if (arr.excluded)
+			continue;
 		double absres = fabs(arr.residual);
-		if (absres>resmax) {
+		if (absres > resmax) {
 			resmax = absres;
 			imax = i;
 		}
@@ -155,7 +156,7 @@ void Autoloc3::_flush()
 	Time t = now();
 	vector<OriginID> ids;
 
-	int dnmax = _config.publicationIntervalPickCount;
+	size_t dnmax = _config.publicationIntervalPickCount;
 
 	for (map<int, OriginPtr>::iterator
 	     it = _outgoing.begin(); it != _outgoing.end(); ++it) {
@@ -901,7 +902,7 @@ OriginPtr Autoloc3::_xxlPreliminaryOrigin(const Pick *newPick)
 			earliest = oldPick;
 	}
 
-	SEISCOMP_DEBUG("Number of XXL picks=%ld", (long int)xxlpicks.size());
+	SEISCOMP_DEBUG("Number of XXL picks=%d", xxlpicks.size());
 	if (xxlpicks.size() < _config.xxlMinPhaseCount)
 		return NULL;
 
@@ -1013,7 +1014,7 @@ OriginPtr Autoloc3::_tryAssociate(const Pick *pick)
 
 	// logging only
 	if (associations.size() > 0)
-		SEISCOMP_INFO("resulting in %ld associations", (long int)associations.size());
+		SEISCOMP_INFO("resulting in %d associations", associations.size());
 
 	// logging all associations
 	for (AssociationVector::const_iterator
@@ -1529,7 +1530,7 @@ void Autoloc3::_ensureConsistentArrivals(Origin *origin)
 
 
 void Autoloc3::_ensureAcceptableRMS(Origin *origin, bool keepDepth) {
-	int minPhaseCount = 20; // TODO: make this configurable
+	size_t minPhaseCount = 20; // TODO: make this configurable
 
 	if (origin->definingPhaseCount() < minPhaseCount) {
 		return;
@@ -1544,7 +1545,7 @@ void Autoloc3::_ensureAcceptableRMS(Origin *origin, bool keepDepth) {
 	while ( origin->rms() > _config.maxRMS ) {
 		SEISCOMP_DEBUG("_ensureAcceptableRMS rms loop %.2f > %.2f", origin->rms(), 0.9*_config.maxRMS);
 
-		int definingPhaseCount = origin->definingPhaseCount();
+		size_t definingPhaseCount = origin->definingPhaseCount();
 
 		if ( definingPhaseCount < minPhaseCount ) {
 			break;
@@ -1926,7 +1927,7 @@ bool Autoloc3::_store(Origin *origin)
 	if (_config.offline || _config.test)  // this won't harm
 		SEISCOMP_DEBUG_S(printDetailed(origin));
 
-	if ( ! origin->imported  &&  origin->definingPhaseCount() >= _config.minPhaseCount)
+	if ( ! origin->imported && origin->definingPhaseCount() >= _config.minPhaseCount)
 		origin->preliminary = false;
 
 	if (origin->depthType == Origin::DepthDefault &&
@@ -1978,7 +1979,7 @@ bool Autoloc3::_associate(Origin *origin, const Pick *pick, const string &phase)
 	//        as criterion.
 
 	// XXX THIS IS A NEW AND EXPERIMENTAL CRITERION XXX
-	int minPhaseCount = _config.minPhaseCount + (delta - station->maxNucDist)*_config.distSlope;
+	size_t minPhaseCount = _config.minPhaseCount + (delta - station->maxNucDist)*_config.distSlope;
 	if (origin->phaseCount() < minPhaseCount) {
 		if (phase == "PKP" && _config.aggressivePKP) {
 			// This is a common case, e.g. small Fiji-Tonga events

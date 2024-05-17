@@ -135,7 +135,7 @@ class Autoloc3 {
 
 			// Minimum number of picks for a normal origin
 			// to be reported
-			int minPhaseCount{6};
+			size_t minPhaseCount{6};
 
 			// Minimum score for an origin to be reported;
 			// this seems to be a more reliable criterion
@@ -143,8 +143,7 @@ class Autoloc3 {
 			double minScore{8.0};
 
 			// Minimum station count for which we ignore PKP phases
-			// XXX not yet used
-			int minStaCountIgnorePKP{15};
+			size_t minStaCountIgnorePKP{15};
 
 			// if a pick can be associated to an origin with at
 			// least this high a score, bypass the nucleator,
@@ -168,8 +167,7 @@ class Autoloc3 {
 
 			double publicationIntervalTimeSlope{0.5};
 			double publicationIntervalTimeIntercept{0.0};
-			int    publicationIntervalPickCount{20};
-			// XXX maybe score interval instead?
+			size_t publicationIntervalPickCount{20};
 
 			// If true, offline mode is selected. In offline mode,
 			// no database is accessed, and station locations are
@@ -225,7 +223,7 @@ class Autoloc3 {
 
 			// Minimum number of picks for an XXL origin
 			// to be reported
-			unsigned int xxlMinPhaseCount{4};   // default 4 picks
+			size_t xxlMinPhaseCount{4};   // default 4 picks
 			double xxlMaxStaDist{10.0};         // unit: degrees
 			double xxlMaxDepth{100};            // unit: km
 
