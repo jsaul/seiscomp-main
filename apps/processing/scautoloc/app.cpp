@@ -25,6 +25,7 @@
 #include <seiscomp/core/datamessage.h>
 #include <seiscomp/io/archive/xmlarchive.h>
 #include <algorithm>
+#include <list>
 
 #include "app.h"
 #include "datamodel.h"
@@ -32,7 +33,6 @@
 #include "util.h"
 
 
-using namespace std;
 using namespace Seiscomp::Client;
 using namespace Seiscomp::Math;
 
@@ -76,14 +76,14 @@ App::App(int argc, char **argv)
 
 
 void App::printUsage() const {
-	cout << "Usage:"  << endl << "  scautoloc [options]" << endl << endl
-	     << "Associator of P-phase picks for locating seismic events." << endl;
+	std::cout << "Usage:"  << std::endl << "  scautoloc [options]" << std::endl << std::endl
+	     << "Associator of P-phase picks for locating seismic events." << std::endl;
 
 	Seiscomp::Client::Application::printUsage();
 
-	cout << "Examples:" << endl;
-	cout << "Real-time processing with informative debug output." << endl
-	     << "  scautoloc --debug" << endl;
+	std::cout << "Examples:" << std::endl;
+	std::cout << "Real-time processing with informative debug output." << std::endl
+	     << "  scautoloc --debug" << std::endl;
 }
 
 
@@ -583,7 +583,7 @@ bool App::init() {
 	}
 	else {
 		// Read historical preferred origins in case we missed something
-		readHistoricEvents();
+// TEMP		readHistoricEvents();
 		if ( _wakeUpTimout > 0 ) {
 			enableTimer(_wakeUpTimout);
 		}
@@ -771,25 +771,26 @@ void App::readHistoricEvents() {
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-bool App::runFromXMLFile(const char *fname)
+bool App::runFromXMLFile(const char *filename)
 {
-	DataModel::EventParametersPtr ep = new DataModel::EventParameters();
-	IO::XMLArchive ar;
+	SEISCOMP_INFO("App::runFromXMLFile");
 
-	if ( ! ar.open(fname)) {
-		SEISCOMP_ERROR("unable to open XML playback file '%s'", fname);
+	IO::XMLArchive ar;
+	if ( ! ar.open(filename)) {
+		SEISCOMP_ERROR("unable to open XML playback file '%s'", filename);
 		return false;
 	}
 
+	DataModel::EventParametersPtr ep = new DataModel::EventParameters();
 	ar >> ep;
 	SEISCOMP_INFO("finished reading event parameters from XML");
-	SEISCOMP_INFO("  number of picks:      %ld", (long int)ep->pickCount());
-	SEISCOMP_INFO("  number of amplitudes: %ld", (long int)ep->amplitudeCount());
-	SEISCOMP_INFO("  number of origins:    %ld", (long int)ep->originCount());
+	SEISCOMP_INFO("  number of picks:      %d", ep->pickCount());
+	SEISCOMP_INFO("  number of amplitudes: %d", ep->amplitudeCount());
+	SEISCOMP_INFO("  number of origins:    %d", ep->originCount());
 
 	// Tuple to be used in DSU sorting. The second member is used to place picks
 	// before amplitudes with identical creation times.
-	typedef std::tuple<Core::Time, int, DataModel::PublicObjectPtr> TimeObject;
+	typedef std::tuple<Core::Time, int, std::string, DataModel::PublicObjectPtr> TimeObject;
 	typedef std::vector<TimeObject> TimeObjectVector;
 
 	// retrieval of relevant objects from event parameters
@@ -800,26 +801,26 @@ bool App::runFromXMLFile(const char *fname)
 		ep->removePick(0);
 		DataModel::PublicObjectPtr o(pick);
 		Core::Time t = pick->creationInfo().creationTime();
-		objs.push_back(TimeObject(t, 0, o));
+		objs.push_back(TimeObject(t, 0, pick->publicID(), o));
 	}
 	while (ep->amplitudeCount() > 0) {
 		DataModel::AmplitudePtr amplitude = ep->amplitude(0);
 		ep->removeAmplitude(0);
 		DataModel::PublicObjectPtr o(amplitude);
 		Core::Time t = amplitude->creationInfo().creationTime();
-		t += Core::TimeSpan(0.00001);
-		objs.push_back(TimeObject(t, 1, o));
+		// t += Core::TimeSpan(0.00001);
+		objs.push_back(TimeObject(t, 1, amplitude->publicID(), o));
 	}
 	while (ep->originCount() > 0) {
 		DataModel::OriginPtr origin = ep->origin(0);
 		ep->removeOrigin(0);
 		DataModel::PublicObjectPtr o(origin);
 		Core::Time t = origin->creationInfo().creationTime();
-		objs.push_back(TimeObject(t, 2, o));
+		objs.push_back(TimeObject(t, 2, origin->publicID(), o));
 	}
 	std::sort(objs.begin(),objs.end());
 	for ( TimeObject &obj : objs ) {
-		_objects.push(std::get<2>(obj));
+		_objects.push(std::get<3>(obj));
 	}
 
 	if ( _objects.empty() )
@@ -839,11 +840,11 @@ bool App::runFromXMLFile(const char *fname)
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-bool App::runFromEPFile(const char *fname) {
+bool App::runFromEPFile(const char *filename) {
+	SEISCOMP_INFO("App::runFromEPFile");
 	IO::XMLArchive ar;
-
-	if ( !ar.open(fname)) {
-		SEISCOMP_ERROR("unable to open XML file: %s", fname);
+	if ( !ar.open(filename)) {
+		SEISCOMP_ERROR("unable to open XML file: %s", filename);
 		return false;
 	}
 
@@ -851,22 +852,22 @@ bool App::runFromEPFile(const char *fname) {
 	ar.close();
 
 	if ( !_ep ) {
-		SEISCOMP_ERROR("No event parameters found: %s", fname);
+		SEISCOMP_ERROR("No event parameters found: %s", filename);
 		return false;
 	}
 
 	SEISCOMP_INFO("finished reading event parameters from XML");
-	SEISCOMP_INFO("  number of picks:      %ld", (long int)_ep->pickCount());
-	SEISCOMP_INFO("  number of amplitudes: %ld", (long int)_ep->amplitudeCount());
-	SEISCOMP_INFO("  number of origins:    %ld", (long int)_ep->originCount());
+	SEISCOMP_INFO("  number of picks:      %d", _ep->pickCount());
+	SEISCOMP_INFO("  number of amplitudes: %d", _ep->amplitudeCount());
+	SEISCOMP_INFO("  number of origins:    %d", _ep->originCount());
 
-	cerr << "Read from file: " << _ep->originCount() << " origin(s), "
+	std::cerr << "Read from file: " << _ep->originCount() << " origin(s), "
 	     << _ep->pickCount() << " pick(s), "
-	     << _ep->amplitudeCount() << " amplitudes(s)"<< endl;
+	     << _ep->amplitudeCount() << " amplitudes(s)"<< std::endl;
 
 	// Tuple to be used in DSU sorting. The second member is used to place picks
 	// before amplitudes with identical creation times.
-	typedef std::tuple<Core::Time, int, DataModel::PublicObjectPtr> TimeObject;
+	typedef std::tuple<Core::Time, int, std::string, DataModel::PublicObjectPtr> TimeObject;
 	typedef std::vector<TimeObject> TimeObjectVector;
 
 	// retrieval of relevant objects from event parameters
@@ -904,7 +905,7 @@ bool App::runFromEPFile(const char *fname) {
 		}
 
 		if ( add ) {
-			objs.push_back(TimeObject(t, 0, pick));
+			objs.push_back(TimeObject(t, 0, pick->publicID(), pick));
 		}
 	}
 
@@ -912,8 +913,8 @@ bool App::runFromEPFile(const char *fname) {
 		DataModel::AmplitudePtr amplitude = _ep->amplitude(i);
 		try {
 			Core::Time t = amplitude->creationInfo().creationTime();
-		t += Core::TimeSpan(0.00001);
-			objs.push_back(TimeObject(t, 1, amplitude));
+			// t += Core::TimeSpan(0.00001);
+			objs.push_back(TimeObject(t, 1, amplitude->publicID(), amplitude));
 		}
 		catch ( ... ) {
 			SEISCOMP_WARNING("Ignore amplitude %s: no creation time set",
@@ -925,7 +926,7 @@ bool App::runFromEPFile(const char *fname) {
 		DataModel::OriginPtr origin = _ep->origin(i);
 		try {
 			Core::Time t = origin->creationInfo().creationTime();
-			objs.push_back(TimeObject(t, 2, origin));
+			objs.push_back(TimeObject(t, 2, origin->publicID(), origin));
 		}
 		catch ( ... ) {
 			SEISCOMP_WARNING("Ignore origin %s: no creation time set",
@@ -935,7 +936,7 @@ bool App::runFromEPFile(const char *fname) {
 
 	std::sort(objs.begin(), objs.end());
 	for ( TimeObject &obj : objs ) {
-		_objects.push(std::get<2>(obj));
+		_objects.push(std::get<3>(obj));
 	}
 
 	while ( !_objects.empty() && !isExitRequested() ) {
@@ -954,7 +955,7 @@ bool App::runFromEPFile(const char *fname) {
 	ar << _ep;
 	ar.close();
 
-	cerr << "Output to XML: " << objectCount << " objects(s)" << endl;
+	std::cerr << "Output to XML: " << objectCount << " objects(s)" << std::endl;
 	return true;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -1013,6 +1014,7 @@ bool App::run() {
 	else if ( ! _exitRequested )
 		runFromPickFile(); // pick file read from stdin
 */
+
 	return true;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -1023,9 +1025,7 @@ bool App::run() {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void App::done() {
 	_exitRequested = true;
-// FIXME	_flush();
 	shutdown();
-//	setStations(NULL);
 	Application::done();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -1135,33 +1135,61 @@ static bool preliminary(const DataModel::Origin *origin) {
 }
 */
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+static void logObjectCounts()
+{
+	SEISCOMP_DEBUG("current %16s count = %d", "PublicObject", Seiscomp::DataModel::PublicObject::ObjectCount());
+	std::map<std::string, std::size_t> count;
+	for (Seiscomp::DataModel::PublicObject::Iterator
+			it  = Seiscomp::DataModel::PublicObject::Begin();
+			it != Seiscomp::DataModel::PublicObject::End(); ++it) {
+		std::string s = (*it).second->className();
+		++count[s];
+	}
+	for (auto& item: count)
+		SEISCOMP_DEBUG("current %16s count = %d", item.first.c_str(), item.second);
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void App::addObject(const std::string& parentID, DataModel::Object* o) {
 	DataModel::PublicObject *po = DataModel::PublicObject::Cast(o);
-	if ( po == nullptr ) {
+	if ( !po ) {
 		return;
 	}
-	// SEISCOMP_DEBUG("adding  %-12s %s", po->className(), po->publicID().c_str());
+
+	bool extra_debug = false;
 
 	DataModel::Pick *pick = DataModel::Pick::Cast(o);
 	if ( pick ) {
 		logObject(_inputPicks, Core::Time::GMT());
-		feed(pick);
+		if ( ! feed(pick))
+			return;
+		if (extra_debug)
+			logObjectCounts();
 		return;
 	}
 
 	DataModel::Amplitude *amplitude = DataModel::Amplitude::Cast(o);
 	if ( amplitude ) {
 		logObject(_inputAmps, Core::Time::GMT());
-		feed(amplitude);
+		if ( ! feed(amplitude))
+			return;
+		if (extra_debug)
+			logObjectCounts();
 		return;
 	}
 
 	DataModel::Origin *origin = DataModel::Origin::Cast(o);
 	if ( origin ) {
 		logObject(_inputOrgs, Core::Time::GMT());
-		feed(origin);
+		if ( ! feed(origin))
+			return;
+		if (extra_debug)
+			logObjectCounts();
 		return;
 	}
 }
@@ -1255,8 +1283,7 @@ bool App::feed(DataModel::Pick *sc3pick) {
 	if ( _config.offline )
 		timeStamp();
 
-	if ( ! ::Autoloc::Autoloc3::feed(pick.get()))
-		return false;
+	::Autoloc::Autoloc3::feed(pick.get());
 
 	if ( _config.offline )
 		_flush();
@@ -1264,6 +1291,7 @@ bool App::feed(DataModel::Pick *sc3pick) {
 	return true;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
 
 
@@ -1300,7 +1328,8 @@ bool App::feed(DataModel::Amplitude *sc3ampl) {
 
 	::Autoloc::Pick *pick = (::Autoloc::Pick *) Autoloc3::pick(pickID);
 	if ( ! pick ) {
-		SEISCOMP_WARNING_S("Pick " + pickID + " not found for " + atype + " amplitude");
+		// TODO: debug message not here
+		SEISCOMP_DEBUG_S("Pick " + pickID + " not found for " + atype + " amplitude");
 		return false;
 	}
 
@@ -1322,6 +1351,8 @@ bool App::feed(DataModel::Amplitude *sc3ampl) {
 	return true;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1369,6 +1400,14 @@ bool App::feed(DataModel::Origin *sc3origin) {
 	//  * an internal, manual origin
 
 	// TODO: Vorher konsistente Picks/Arrivals sicher stellen.
+	size_t arrivalCount = sc3origin->arrivalCount();
+	for ( size_t i=0; i<arrivalCount; i++ ) {
+		const std::string &pickID = sc3origin->arrival(i)->pickID();
+		DataModel::Pick *sc3pick = DataModel::Pick::Find(pickID);
+		if ( ! sc3pick) {
+			SEISCOMP_ERROR_S("Pick " + pickID + " not found");
+		}
+	}
 
 	::Autoloc::Origin *origin = convertFromSC3(sc3origin);
 	if ( ! origin ) {
@@ -1394,6 +1433,7 @@ bool App::feed(DataModel::Origin *sc3origin) {
 	return true;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
 
 
@@ -1446,7 +1486,7 @@ bool App::_report(const ::Autoloc::Origin *origin) {
 		SEISCOMP_INFO("Sent preliminary origin %ld (heads up)", origin->id);
 
 		// create and send journal entry
-		string str = "";
+		std::string str = "";
 		try {
 			str = sc3origin->evaluationStatus().toString();
 		}
@@ -1488,9 +1528,8 @@ bool App::_report(const ::Autoloc::Origin *origin) {
 
 
 
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-}
+} // namespace Autoloc
 
-}
+} // namespace Applications
 
-}
+} // namespace Seiscomp
