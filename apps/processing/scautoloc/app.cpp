@@ -1138,16 +1138,19 @@ static bool preliminary(const DataModel::Origin *origin) {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 static void logObjectCounts()
 {
-	SEISCOMP_DEBUG("current %16s count = %d", "PublicObject", Seiscomp::DataModel::PublicObject::ObjectCount());
-	std::map<std::string, std::size_t> count;
-	for (Seiscomp::DataModel::PublicObject::Iterator
-			it  = Seiscomp::DataModel::PublicObject::Begin();
-			it != Seiscomp::DataModel::PublicObject::End(); ++it) {
-		std::string s = (*it).second->className();
-		++count[s];
+	// This is expensive so don't overuse it!
+
+	DataModel::PublicObject::Lock();
+	SEISCOMP_DEBUG("%14s count = %d", "PublicObject", DataModel::PublicObject::ObjectCount());
+	std::map<const char*, std::size_t> count;
+	for (DataModel::PublicObject::Iterator
+			it  = DataModel::PublicObject::Begin();
+			it != DataModel::PublicObject::End(); ++it) {
+		++count[(*it).second->className()];
 	}
 	for (auto& item: count)
-		SEISCOMP_DEBUG("current %16s count = %d", item.first.c_str(), item.second);
+		SEISCOMP_DEBUG("current %16s count = %d", item.first, item.second);
+	DataModel::PublicObject::Unlock();
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -1161,7 +1164,7 @@ void App::addObject(const std::string& parentID, DataModel::Object* o) {
 		return;
 	}
 
-	bool extra_debug = false;
+	bool extra_debug = true;
 
 	DataModel::Pick *pick = DataModel::Pick::Cast(o);
 	if ( pick ) {
