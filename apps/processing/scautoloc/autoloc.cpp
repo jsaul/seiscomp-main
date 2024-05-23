@@ -1900,6 +1900,8 @@ bool Autoloc3::_publishable(const Origin *origin) const
 
 bool Autoloc3::_store(Origin *origin)
 {
+	OriginPtr ptr{origin};
+
 	_rename_P_PKP(origin);
 
 	if ( origin->imported ) { // FIXME
@@ -1915,7 +1917,6 @@ bool Autoloc3::_store(Origin *origin)
 	Origin *existing = origin->id ?_origins.find(origin->id) : nullptr;
 	if (existing) {
 		existing->updateFrom(origin);
-		delete origin;
 		origin = existing;
 		SEISCOMP_INFO_S(" UPD " + printOneliner(origin));
 	}
@@ -1979,7 +1980,7 @@ bool Autoloc3::_associate(Origin *origin, const Pick *pick, const string &phase)
 	//        as criterion.
 
 	// XXX THIS IS A NEW AND EXPERIMENTAL CRITERION XXX
-	size_t minPhaseCount = _config.minPhaseCount + (delta - station->maxNucDist)*_config.distSlope;
+	int minPhaseCount = _config.minPhaseCount + (delta - station->maxNucDist)*_config.distSlope;
 	if (origin->phaseCount() < minPhaseCount) {
 		if (phase == "PKP" && _config.aggressivePKP) {
 			// This is a common case, e.g. small Fiji-Tonga events
