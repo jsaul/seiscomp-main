@@ -292,10 +292,8 @@ class Autoloc3 {
 		bool sync(const Time &t);
 
 	protected:
-		// !!!!!!!!!!!!!!!!!!!!!!!
 		// This must be reimplemented in a subclass to properly
 		// print/send/etc. the origin
-		// !!!!!!!!!!!!!!!!!!!!!!!
 		virtual bool _report(const Origin *);
 
 	protected:

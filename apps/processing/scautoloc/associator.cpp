@@ -30,56 +30,76 @@ namespace Autoloc {
 
 #define AFFMIN 0.1
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Associator::Associator()
 {
-	_origins = 0;
-	_stations = 0;
+	_origins = nullptr;
+	_stations = nullptr;
 
-	// The order of the phases is crucial!
+	// The order of the phases is essential!
 	_phases.push_back( Phase("P",      0, 180) );
 	_phases.push_back( Phase("PcP",   25,  55) );
 	_phases.push_back( Phase("ScP",   25,  55) );
 	_phases.push_back( Phase("PP",    60, 160) );
-// FIXME: For these, there are no tables in LocSAT!
+
+	// FIXME: For these, there are no tables in LocSAT!
 	_phases.push_back( Phase("SKP",  120, 150) );
 	_phases.push_back( Phase("PKKP",  80, 130) );
 	_phases.push_back( Phase("PKiKP", 30, 120) );
 	_phases.push_back( Phase("SKKP", 110, 152) );
-// TODO: make the phase set configurable
-}
 
-Associator::~Associator()
-{
+	// TODO: make the phase set configurable
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void
 Associator::setStations(const StationMap *stations)
 {
 	_stations = stations;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void
 Associator::setOrigins(const OriginVector *origins)
 {
 	_origins = origins;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void
 Associator::reset()
 {
 	_associations.clear();
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void
 Associator::shutdown()
 {
 	reset();
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool
 Associator::feed(const Pick* pick)
 {
@@ -97,11 +117,12 @@ Associator::feed(const Pick* pick)
 		const Origin  *origin = _origin.get();
 		const Station *station = pick->station();
 
+		const Hypocenter &hypo{origin->hypocenter};
 		double delta, az, baz;
-		delazi(origin, station, delta, az, baz);
+		delazi(&hypo, station, delta, az, baz);
 
 		Seiscomp::TravelTimeList
-			*ttlist = ttt.compute(origin->lat, origin->lon, origin->dep,
+			*ttlist = ttt.compute(hypo.lat, hypo.lon, hypo.dep,
 			                      station->lat, station->lon, 0);
 
 		// An imported origin is treated as if it had a very high
@@ -187,23 +208,37 @@ Associator::feed(const Pick* pick)
 
 	return (_associations.size() > 0);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const AssociationVector &
 Associator::associations() const
 {
 	return _associations;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Association*
 Associator::associate(Origin *origin, const Pick *pick, const string &phase)
 {
-	return NULL;
+	return nullptr;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Associator::Phase::Phase(const string &code, double dmin, double dmax)
 	: code(code), dmin(dmin), dmax(dmax) {}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 }  // namespace Autoloc

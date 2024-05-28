@@ -38,6 +38,21 @@
 
 namespace Autoloc {
 
+
+void delazi(double lat1, double lon1, double lat2, double lon2,
+            double &delta, double &az1, double &az2)
+{
+	Seiscomp::Math::Geo::delazi(lat1, lon1, lat2, lon2, &delta, &az1, &az2);
+}
+
+
+void delazi(const Hypocenter *hypo, const Station *station,
+            double &delta, double &az1, double &az2)
+{
+	Seiscomp::Math::Geo::delazi(hypo->lat, hypo->lon, station->lat, station->lon, &delta, &az1, &az2);
+}
+
+
 double distance(const Station* s1, const Station* s2)
 {
 	double delta, az, baz;
@@ -179,17 +194,16 @@ static Time str2time(const std::string &s)
 
 std::string time2str(const Time &t)
 {
-	return sc3time(t).toString("%F %T.%f000000").substr(0,21);
+	return sctime(t).toString("%F %T.%f000000").substr(0,21);
 }
 
 
 double meandev(const Origin* origin)
 {
-	int arrivalCount = origin->arrivals.size();
-	double cumresid = 0, cumweight = 0.;
+	double cumresid {0};
+	double cumweight {0};
 
-	for(int i=0; i<arrivalCount; i++) {
-		const Arrival &arr = origin->arrivals[i];
+	for (const Arrival &arr : origin->arrivals) {
 		if (arr.excluded)
 			continue;
 		cumresid  += fabs(arr.residual);
@@ -215,7 +229,7 @@ double avgfn(double x)
 
 std::string printOrigin(const Origin *origin, bool oneliner)
 {
-	assert(origin!=NULL);
+	assert(origin);
 
 	std::ostringstream out;
 
@@ -236,30 +250,29 @@ std::string printOrigin(const Origin *origin, bool oneliner)
 		double score = originScore(origin);
 		char s[200];
 		std::string tstr = time2str(origin->time).substr(11);
-		sprintf(s, "%-6lu %s %6.2f %7.2f %3.0f%c %4.1f %3d %3lu s=%5.1f",
+		sprintf(s, "%-6lu %s %6.2f %7.2f %3.0f%c %4.1f %3ld %3ld s=%5.1f",
 			origin->id, tstr.c_str(),
-			origin->lat, origin->lon, origin->dep, depthFlag,
+			origin->hypocenter.lat, origin->hypocenter.lon, origin->hypocenter.dep, depthFlag,
 			origin->rms(), origin->definingPhaseCount(),
-			(unsigned long)origin->arrivals.size(),score);
+			origin->arrivals.size(), score);
 		out << s;
 	}
 	else {
 		out << "Detailed info for Origin " << origin->id << std::endl
 		    << time2str(origin->time) << "  ";
 		out.precision(5);
-		out << origin->lat << "  " << origin->lon << "  ";
+		out << origin->hypocenter.lat << "  " << origin->hypocenter.lon << "  ";
 		out.precision(3);
-		out << origin->dep << depthFlag << std::endl;
+		out << origin->hypocenter.dep << depthFlag << std::endl;
 
 		out.setf(std::ios::right);
 
-		int arrivalCount = origin->arrivals.size();
-		for(int i=0; i<arrivalCount; i++) {
-			const Arrival &arr = origin->arrivals[i];
+		size_t lineno = 0;
+		for (const Arrival &arr : origin->arrivals) {
 			const Pick* pick = arr.pick.get();
 
 			std::string excludedFlag;
-			switch(arr.excluded) {
+			switch (arr.excluded) {
 			case Arrival::NotExcluded:          excludedFlag = "  "; break;
 			case Arrival::LargeResidual:        excludedFlag = "Xr"; break;
 			case Arrival::StationDistance:      excludedFlag = "Xd"; break;
@@ -278,7 +291,7 @@ std::string printOrigin(const Origin *origin, bool oneliner)
 			std::string sta = pick->station()->code;
 
 			out.precision(1);
-			out     << std::left << std::setw(4) << (i+1)
+			out     << std::left << std::setw(4) << (++lineno)
 				<< std::setw(6) << sta
 				<< std::setw(3) << net;
 			out.precision(2);
@@ -340,7 +353,7 @@ StationMap *readStationLocations(const std::string &fname)
 	if ( stations->size() == 0) {
 		SEISCOMP_ERROR_S("No stations read from file " + fname);
 		delete stations;
-		return NULL;
+		return nullptr;
 	}
 
 	return stations;
@@ -393,7 +406,7 @@ Pick* readPickLine()
 	char stat;
 
 	if ( ! (std::cin >>date >>time >>net >>sta >>cha >>loc >>snr >>amp >>per >>stat >>id) )
-		return NULL;
+		return nullptr;
 
 	std::string key = net + "." + sta;
 	Time ptime = str2time(date+" "+time);
@@ -418,7 +431,7 @@ PickVector readPickFile()
 	PickVector picks;
 	PickPtr pick = 0;
 
-	while ( (pick = readPickLine()) != NULL)
+	while ( (pick = readPickLine()) != nullptr)
 		picks.push_back(pick);
 
 	return picks;
@@ -456,14 +469,14 @@ double rms(const std::vector<double> &v, double offset /* = 0 */)
 	const double *f = &v[0];
 	double fi, r=0;
 
-	if(offset) {
-		for(unsigned int i=0; i<n; i++, f++) {
+	if (offset) {
+		for (size_t i=0; i<n; i++, f++) {
 			fi = ((*f)-offset);
 			r += fi*fi;
 		}
 	}
 	else {
-		for(unsigned int i=0; i<n; i++, f++) {
+		for (size_t i=0; i<n; i++, f++) {
 			r += (*f)*(*f);
 		}
 	}

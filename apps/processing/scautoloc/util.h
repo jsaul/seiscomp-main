@@ -25,6 +25,8 @@
 
 namespace Autoloc {
 
+void delazi(double lat1, double lon1, double lat2, double lon2, double &delta, double &az1, double &az2);
+void delazi(const Hypocenter *hypo, const Station *station, double &delta, double &az1, double &az2);
 double distance(const Station* s1, const Station* s2);
 std::string printDetailed(const Origin*);
 std::string printOneliner(const Origin*);

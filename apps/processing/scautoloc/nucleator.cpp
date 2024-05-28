@@ -142,21 +142,18 @@ int ProjectedPick::count()
 }
 
 
+
+
 GridPoint::GridPoint(double latitude, double longitude, double depth)
-	: Hypocenter(latitude,longitude,depth), _radius(4), _dt(50), maxStaDist(180), _nmin(6), _nminPrelim(4), _origin(new Origin(latitude,longitude,depth,0))
+	: hypocenter(latitude, longitude, depth), _radius(4), _dt(50), maxStaDist(180), _nmin(6), _nminPrelim(4)
 {
 }
 
-GridPoint::GridPoint(const Origin &origin)
-	: Hypocenter(origin.lat,origin.lon,origin.dep), _radius(4), _dt(50), maxStaDist(180), _nmin(6), _nminPrelim(4), _origin(new Origin(origin))
-{
-}
 
 
 const Origin*
 GridPoint::feed(const Pick* pick)
 {
-// return nullptr; // TEMP XXX FIXME
 	// find the station corresponding to the pick
 	const std::string key = station_key(pick->station());
 
@@ -164,13 +161,11 @@ GridPoint::feed(const Pick* pick)
 		xit = _wrappers.find(key);
 	if (xit==_wrappers.end())
 		// this grid cell may be out of range for that station
-		return NULL;
+		return nullptr;
 	StationWrapperCPtr wrapper = (*xit).second;
 	if ( ! wrapper->station ) {
-		// TODO test in Nucleator::feed() and use logging
-		// TODO at this point probably an exception should be thrown
 		SEISCOMP_ERROR("Nucleator: station '%s' not found", key.c_str());
-		return NULL;
+		return nullptr;
 
 	}
 
@@ -180,12 +175,13 @@ GridPoint::feed(const Pick* pick)
 
 	// If the station distance exceeds the maximum station distance
 	// configured for the grid point...
-	if ( wrapper->distance > maxStaDist ) return NULL;
+	if ( wrapper->distance > maxStaDist )
+		return nullptr;
 
 	// If the station distance exceeds the maximum nucleation distance
 	// configured for the station...
 	if ( wrapper->distance > wrapper->station->maxNucDist )
-		return NULL;
+		return nullptr;
 
 	// back-project pick to hypothetical origin time
 	ProjectedPick pp(pick, wrapper);
@@ -205,7 +201,7 @@ GridPoint::feed(const Pick* pick)
 
 	// if the number of picks around the new pick is too low...
 	if (npick < _nmin)
-		return NULL;
+		return nullptr;
 
 	// now take a closer look at how tightly clustered the picks are
 	double dt0 = 4; // XXX
@@ -245,7 +241,7 @@ GridPoint::feed(const Pick* pick)
 	for (int i=0; i<npick; i++)
 		sum += _flg[i];
 	if (sum < _nmin)
-		return NULL;
+		return nullptr;
 
 	std::vector<ProjectedPick> group;
 	int cntmax = 0;
@@ -268,8 +264,8 @@ GridPoint::feed(const Pick* pick)
 		ptime[i] = pps[i].projectedTime();
 	}
 
-//	Origin* origin = new Origin(lat, lon, dep, otime);
-	_origin->arrivals.clear();
+	Origin* _origin = new Origin(hypocenter.lat, hypocenter.lon, hypocenter.dep, otime);
+
 	// add Picks/Arrivals to that newly created Origin
 	set<string> stations;
 	for (unsigned int i=0; i<group.size(); i++) {
@@ -294,11 +290,15 @@ GridPoint::feed(const Pick* pick)
 		_origin->arrivals.push_back(arr);
 	}
 
-	if (_origin->arrivals.size() < (size_t)_nmin)
-		return NULL;
+	if (_origin->arrivals.size() < (size_t)_nmin) {
+		delete _origin;
+		return nullptr;
+	}
 
-	return _origin.get();
+	return _origin;
 }
+
+
 
 int GridPoint::cleanup(const Time& minTime)
 {
@@ -315,10 +315,11 @@ int GridPoint::cleanup(const Time& minTime)
 }
 
 
+
 bool GridPoint::setupStation(const Station *station)
 {
 	double delta=0, az=0, baz=0;
-	delazi(this, station, delta, az, baz);
+	delazi(&hypocenter, station, delta, az, baz);
 
 	// Don't setup the grid point for a station if it is out of
 	// range for that station - this reduces the memory used by
@@ -327,7 +328,7 @@ bool GridPoint::setupStation(const Station *station)
 		return false;
 
 	TravelTime tt;
-	if ( ! travelTimeP(lat, lon, dep, station->lat, station->lon, 0, delta, tt))
+	if ( ! travelTimeP(hypocenter.lat, hypocenter.lon, hypocenter.dep, station->lat, station->lon, 0, delta, tt))
 		return false;
 
 	StationWrapperCPtr sw = new StationWrapper(station, tt.phase, delta, az, tt.time, tt.dtdd);
@@ -364,24 +365,23 @@ static PickSet originPickSet(const Origin *origin)
 {
 	PickSet picks;
 
-	int arrivalCount = origin->arrivals.size();
-	for(int i=0; i<arrivalCount; i++) {
-		Arrival &arr = ((Origin*)origin)->arrivals[i];
-		if (arr.excluded) continue;
+	for (Arrival &arr : ((Origin*)origin)->arrivals) {
+		if (arr.excluded)
+			continue;
 		picks.insert(arr.pick);
 	}
+
 	return picks;
 }
 
 double originScore(const Origin *origin, double maxRMS, double networkSizeKm)
 {
-//	networkSizeKm = 200.;
 	((Origin*)origin)->arrivals.sort();
 
 	double score = 0, amplScoreMax=0;
-	int arrivalCount = origin->arrivals.size();
+	size_t arrivalCount = origin->arrivals.size();
 	//int n = origin->definingPhaseCount();
-	for(int i=0; i<arrivalCount; i++) {
+	for ( size_t i=0; i<arrivalCount; i++) {
 		double phaseScore = 1; // 1 for P / 0.3 for PKP
 		Arrival &arr = ((Origin*)origin)->arrivals[i];
 		PickCPtr pick = arr.pick;
@@ -433,7 +433,7 @@ double originScore(const Origin *origin, double maxRMS, double networkSizeKm)
 		// Amplitudes usually decrease with distance.
 		// This hack takes this fact into account for computing the score.
 		// A sudden big amplitude at large distance cannot increase the score too badly
-		if(amplScoreMax==0)
+		if (amplScoreMax==0)
 			amplScoreMax = amplScore;
 		else {
 			if (i>2 && amplScore > amplScoreMax+0.4)
@@ -448,7 +448,7 @@ double originScore(const Origin *origin, double maxRMS, double networkSizeKm)
 		// "scaled" residual
 		// This accounts for the fact that at the beginning, origins
 		// are more susceptible to outliers, so we allow a somewhat
-		// higher residual. XXX Note that this may increase the score
+		// higher residual. Note that this may increase the score
 		// for origins with less arrivals, which might be harmful.
 
 		double timeScore = avgfn2(arr.residual/(2*maxRMS));
@@ -457,12 +457,23 @@ double originScore(const Origin *origin, double maxRMS, double networkSizeKm)
 		arr.ascore = amplScore;
 		arr.tscore = timeScore;
 
-		if (arr.excluded) {
-			if (arr.excluded != Arrival::UnusedPhase)
+		switch (arr.excluded) {
+			case Arrival::UnusedPhase:
+				if (arr.phase.substr(0,3) == "PKP")
+					phaseScore = 0.3;
+				else
+					phaseScore = 0.1;
+				break;
+
+			// REVIEW!
+			// case Arrival::TemporarilyExcluded:
+			//	break;
+
+			case Arrival::NotExcluded:
+				break;
+
+			default:
 				continue;
-			if (arr.phase.substr(0,3) != "PKP")
-				continue;
-			phaseScore = 0.3;
 		}
 
 //		arr.score = phaseScore*weight*timeScore;
@@ -477,7 +488,7 @@ double originScore(const Origin *origin, double maxRMS, double networkSizeKm)
 //	score -= 0.1*(origin->medianStationDistance() - 30);
 
 	// slight preference to shallower origins
-	score *= depthFactor(origin->dep);
+	score *= depthFactor(origin->hypocenter.dep);
 
 /*
 	double rms = origin->rms();
@@ -559,20 +570,13 @@ bool GridSearch::feed(const Pick *pick)
 	// Feed the new pick into the individual grid points
 	// and save all "candidate" origins in originVector
 
-	// XXX
-	bool track = false;
-	if (pick->id == "20181211.023135.99-AIC-C1.MG02..BHZ")
-		track = true;
-
 	double maxScore = 0;
-	for (Grid::iterator it=_grid.begin(); it!=_grid.end(); ++it) {
-
-		GridPoint *gp = it->get();
+	for (GridPointPtr &gp : _grid) {
 
 		if (stationSetupNeeded)
 			gp->setupStation(pick->station());
 
-		const Origin *origin = gp->feed(pick);
+		OriginCPtr origin = gp->feed(pick);
 		if ( ! origin)
 			continue;
 
@@ -588,17 +592,17 @@ bool GridSearch::feed(const Pick *pick)
 			// this is actually an unexpected condition!
 			continue;
 
-		const PickSet pickSet = originPickSet(origin);
+		const PickSet pickSet = originPickSet(origin.get());
 		// test if we already have an origin with this particular pick set
 		if (pickSetOriginMap.find(pickSet) != pickSetOriginMap.end()) {
 			double score1 = originScore(pickSetOriginMap[pickSet].get());
-			double score2 = originScore(origin);
+			double score2 = originScore(origin.get());
 			if ( score2 <= score1 ) {
 				continue;
 			}
 		}
 
-		double score = originScore(origin);
+		double score = originScore(origin.get());
 		if ( score < 0.6*maxScore ) {
 			continue;
 		}
@@ -609,7 +613,7 @@ bool GridSearch::feed(const Pick *pick)
 
 /*
 		_relocator.useFixedDepth(true);
-		OriginPtr relo = _relocator.relocate(origin);
+		OriginPtr relo = _relocator.relocate(origin.get());
 		if ( ! relo)
 			continue;
 
@@ -620,7 +624,7 @@ bool GridSearch::feed(const Pick *pick)
 			continue;
 */
 
-		OriginPtr newOrigin = new Origin(*origin);
+		OriginPtr newOrigin = new Origin(*origin.get());
 
 		pickSetOriginMap[pickSet] = newOrigin;
 	}
@@ -657,20 +661,7 @@ bool GridSearch::feed(const Pick *pick)
 		tempOrigins.push_back(relo);
 	}
 
-	if (track) {
-		for (OriginVector::iterator
-			it=tempOrigins.begin(); it!=tempOrigins.end(); ++it) {
-			const Origin *org = it->get();
-			SEISCOMP_ERROR_S("XXX "+printOneliner(org));
-			for (ArrivalVector::const_iterator
-				it=org->arrivals.begin(); it!=org->arrivals.end(); ++it) {
-					SEISCOMP_ERROR_S("XXX   "+it->pick->id);
-			}
-		}
-	}
-
-
-	// Now for all "candidate" origins in tempOrigins try to find the
+	// For all candidate origins in tempOrigins try to find the
 	// "best" one. This is a bit problematic as we don't go back and retry
 	// using the second-best but give up here. Certainly scope for
 	// improvement.

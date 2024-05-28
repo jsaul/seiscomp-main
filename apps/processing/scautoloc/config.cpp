@@ -109,8 +109,9 @@ void Autoloc3::Config::dump() const {
 	SEISCOMP_INFO("    minScore                         %.1f",   minScore);
 	SEISCOMP_INFO("    minPickSNR                       %.1f",   minPickSNR);
 	SEISCOMP_INFO("    goodRMS                          %.1f s", goodRMS);
-	SEISCOMP_INFO("    useManualOrigins                 %s",     useManualOrigins ? "true":"false");
 	SEISCOMP_INFO("    useManualPicks                   %s",     useManualPicks ? "true":"false");
+	SEISCOMP_INFO("    useManualOrigins                 %s",     useManualOrigins ? "true":"false");
+	SEISCOMP_INFO("    useImportedOrigins               %s",     useImportedOrigins ? "true":"false");
 	SEISCOMP_INFO("    publicationIntervalTimeSlope     %.2f",   publicationIntervalTimeSlope);
 	SEISCOMP_INFO("    publicationIntervalTimeIntercept %.1f",   publicationIntervalTimeIntercept);
 	SEISCOMP_INFO("    publicationIntervalPickCount     %d",     publicationIntervalPickCount);

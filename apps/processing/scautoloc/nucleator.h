@@ -21,13 +21,12 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <list>
 #include <set>
 #include <map>
 
 #include "datamodel.h"
 #include "locator.h"
-//#include "autoloc.h"
+
 
 namespace Autoloc {
 
@@ -122,6 +121,7 @@ class GridSearch : public Nucleator
 		void shutdown()
 		{
 			_abort = true;
+			_grid.clear();
 		}
 
 	protected:
@@ -214,14 +214,12 @@ class ProjectedPick {
 
 
 
-class GridPoint : public Hypocenter
+class GridPoint : public Seiscomp::Core::BaseObject
 {
 	public:
 		// normal grid point
 		GridPoint(double latitude, double longitude, double depth);
 
-		// grid point based on an existing origin (to get the aftershocks)
-		GridPoint(const Origin &);
 		~GridPoint() {
 			_wrappers.clear();
 			_picks.clear();
@@ -239,6 +237,9 @@ class GridPoint : public Hypocenter
 
 		bool setupStation(const Station *station);
 
+	public:
+		Hypocenter hypocenter;
+
 	public: // private:
 		// config
 		double _radius, _dt;
@@ -252,7 +253,6 @@ class GridPoint : public Hypocenter
 	private:
 		std::map<std::string, StationWrapperCPtr> _wrappers;
 		std::multiset<ProjectedPick> _picks;
-		OriginPtr _origin;
 };
 
 

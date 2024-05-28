@@ -48,7 +48,8 @@ void MySensorLocationDelegate::setStation(const Autoloc::Station *station) {
 
 Seiscomp::DataModel::SensorLocation *
 MySensorLocationDelegate::getSensorLocation(Seiscomp::DataModel::Pick *pick) const {
-	if ( !pick ) return NULL;
+	if ( !pick )
+		return nullptr;
 
 	std::string key = pick->waveformID().networkCode() + "." + pick->waveformID().stationCode();
 
@@ -56,7 +57,7 @@ MySensorLocationDelegate::getSensorLocation(Seiscomp::DataModel::Pick *pick) con
 	if ( it != _sensorLocations.end() )
 		return it->second.get();
 
-	return NULL;
+	return nullptr;
 }
 
 Locator::Locator()
@@ -81,22 +82,21 @@ bool Locator::init()
 	}
 
 	const std::string locator = "LOCSAT";
-	_sc3locator =
-		Seiscomp::Seismology::LocatorInterface::Create(locator.c_str());
-	if ( !_sc3locator) {
-		SEISCOMP_ERROR_S("Could not create "+locator+" instance");
+	_sclocator = Seiscomp::Seismology::LocatorInterface::Create(locator.c_str());
+	if ( !_sclocator) {
+		SEISCOMP_ERROR_S("Could not create " + locator + " instance");
 		exit(-1);
 	}
 
-	if ( !_sc3locator->init(*_scconfig))
+	if ( !_sclocator->init(*_scconfig))
 		return false;
 
-	_sc3locator->useFixedDepth(false);
+	_sclocator->useFixedDepth(false);
 	_minDepth = 5;
 	setFixedDepth(_minDepth, false);
 
 	sensorLocationDelegate = new MySensorLocationDelegate;
-	_sc3locator->setSensorLocationDelegate(sensorLocationDelegate.get());
+	_sclocator->setSensorLocationDelegate(sensorLocationDelegate.get());
 
 	return true;
 }
@@ -140,7 +140,7 @@ Origin *Locator::relocate(const Origin *origin)
 // FIXME: This is still needed, but it would be better to get rid of it!
 	// if the origin to relocate has a fixed depth, keep it fixed!
 	if ( hasFixedDepth(origin) ) {
-		setFixedDepth(origin->dep);
+		setFixedDepth(origin->hypocenter.dep);
 	}
 // ^^^^^^^^^^^^^^^^
 /*
@@ -149,29 +149,31 @@ Origin *Locator::relocate(const Origin *origin)
 */
 
 
-	Origin* relo = _sc3relocate(origin);
-	if (relo == NULL)
-		return NULL;
+	Origin* relo = _screlocate(origin);
+	if ( ! relo)
+		return nullptr;
 
-	if (relo->dep <= _minDepth &&
+	if (relo->hypocenter.dep <= _minDepth &&
 	    relo->depthType != Origin::DepthManuallyFixed &&
-	    ! _sc3locator->usingFixedDepth()) {
+	    ! _sclocator->usingFixedDepth()) {
 
-			// relocate again, this time fixing the depth to _minDepth
-			// NOTE: This reconfigures the locator temporarily!
-			setFixedDepth(_minDepth, true);
-			Origin *relo2 = _sc3relocate(origin);
-			useFixedDepth(false); // restore free depth
+		// relocate again, this time fixing the depth to _minDepth
+		// NOTE: This reconfigures the locator temporarily!
+		setFixedDepth(_minDepth, true);
+		Origin *relo2 = _screlocate(origin);
+		useFixedDepth(false); // restore free depth
 
-			if (relo2 != NULL) {
-				delete relo;
-				relo = relo2;
-				relo->depthType = Origin::DepthMinimum;
-			}
-			else {
-				delete relo;
-				return NULL;
-			}
+		delete relo;
+
+		if ( ! relo2) {
+			// give up
+			return nullptr;
+		}
+		else {
+			// adopt 2nd relocation result
+			relo = relo2;
+			relo->depthType = Origin::DepthMinimum;
+		}
 	}
 
 	OriginQuality &q = relo->quality;
@@ -182,19 +184,19 @@ Origin *Locator::relocate(const Origin *origin)
 }
 
 
-Origin* Locator::_sc3relocate(const Origin *origin)
+Origin* Locator::_screlocate(const Origin *origin)
 {
-	// convert origin to SC3, relocate, and convert the result back
+	// convert origin to SC, relocate, and convert the result back
 
-	Seiscomp::DataModel::OriginPtr sc3origin = convertToSC3(origin);
-	if ( sc3origin==NULL ) {
+	Seiscomp::DataModel::OriginPtr scorigin = convertToSC(origin);
+	if ( ! scorigin ) {
 		// give up
 		SEISCOMP_ERROR("Unexpected failure to relocate origin");
-		return NULL;
+		return nullptr;
 	}
 
-	Seiscomp::DataModel::TimeQuantity sc3tq;
-	Seiscomp::DataModel::RealQuantity sc3rq;
+	Seiscomp::DataModel::TimeQuantity sctq;
+	Seiscomp::DataModel::RealQuantity scrq;
 
 /*
 	if(fixedDepth>=0) {
@@ -207,9 +209,9 @@ Origin* Locator::_sc3relocate(const Origin *origin)
 		releaseDepth();
 */
 
-	// Store SC3 Picks/Stations here so that they can be found
-	// by LocSAT via SC3 PublicObject lookup
-	vector<Seiscomp::DataModel::PublicObjectPtr> sc3objects;
+	// Store SC Picks/Stations here so that they can be found
+	// by LocSAT via SC PublicObject lookup
+	vector<Seiscomp::DataModel::PublicObjectPtr> scobjects;
 
 	int arrivalCount = origin->arrivals.size();
 	for (int i=0; i<arrivalCount; i++) {
@@ -218,51 +220,53 @@ Origin* Locator::_sc3relocate(const Origin *origin)
 		const Seiscomp::DataModel::Phase phase(arr.phase);
 
 		Seiscomp::DataModel::PickPtr
-			sc3pick = Seiscomp::DataModel::Pick::Find(arr.pick->id);
+			scpick = Seiscomp::DataModel::Pick::Find(arr.pick->id);
 
-		if ( sc3pick == NULL ) {
-			sc3pick = Seiscomp::DataModel::Pick::Create(arr.pick->id);
-			if ( sc3pick == NULL ) {
-				SEISCOMP_ERROR_S("Locator::_sc3relocate(): Failed to create pick "+arr.pick->id+" - giving up");
-				return NULL;
+		if ( !scpick) {
+			scpick = Seiscomp::DataModel::Pick::Create(arr.pick->id);
+			if ( !scpick ) {
+				SEISCOMP_ERROR_S("Locator::_screlocate(): Failed to create pick "+arr.pick->id+" - giving up");
+				return nullptr;
 			}
 			const Station *sta = arr.pick->station();
 			Seiscomp::DataModel::WaveformStreamID wfid(sta->net, sta->code, "", "XYZ", "");
-			sc3pick->setWaveformID(wfid);
-			sc3tq.setValue(sc3time(arr.pick->time));
-			sc3pick->setTime(sc3tq);
-			sc3pick->setPhaseHint(phase);
-			sc3pick->setEvaluationMode(Seiscomp::DataModel::EvaluationMode(Seiscomp::DataModel::AUTOMATIC));
+			scpick->setWaveformID(wfid);
+			sctq.setValue(sctime(arr.pick->time));
+			scpick->setTime(sctq);
+			scpick->setPhaseHint(phase);
+			scpick->setEvaluationMode(Seiscomp::DataModel::EvaluationMode(Seiscomp::DataModel::AUTOMATIC));
 		}
-		sc3objects.push_back(sc3pick);
+		scobjects.push_back(scpick);
 	}
 
 
 	// 
 	// try the actual relocation
 	//
-	Seiscomp::DataModel::OriginPtr sc3relo;
+	Seiscomp::DataModel::OriginPtr screlo;
 	try {
 		// FIXME| It is strange: sometimes LocSAT requires a second
 		// FIXME| invocation to produce a decent result. Reason TBD
 		Seiscomp::DataModel::OriginPtr temp;
-		temp    = _sc3locator->relocate(sc3origin.get());
-		if (!temp) return NULL;
-		sc3relo = _sc3locator->relocate(temp.get());
-		if (!sc3relo) return NULL;
+		temp = _sclocator->relocate(scorigin.get());
+		if ( !temp )
+			return nullptr;
+		screlo = _sclocator->relocate(temp.get());
+		if ( !screlo )
+			return nullptr;
 	}
 	catch(Seiscomp::Seismology::LocatorException &) {
-		return NULL;
+		return nullptr;
 	}
 	catch(Seiscomp::Seismology::PickNotFoundException &) {
 		SEISCOMP_WARNING("Unsuccessful location due to PickNotFoundException");
-		return NULL;
+		return nullptr;
 	}
 
 
 
 	// 
-	// Now get the relocated origin back from SC3
+	// Now get the relocated origin back from SC
 	// TODO: put it into sc3adapters.cpp
 	// HOWEVER: here a copy of the original origin is just updated
 	//
@@ -274,28 +278,28 @@ Origin* Locator::_sc3relocate(const Origin *origin)
 	//
 	Origin *relo = new Origin(*origin);
 	if ( ! relo)
-		return NULL;
+		return nullptr;
 
-	relo->lat     = sc3relo->latitude().value();
-	try { relo->laterr  = 0.5*(sc3relo->latitude().lowerUncertainty()+sc3relo->latitude().upperUncertainty()); }
-	catch ( ... ) { relo->laterr  = sc3relo->latitude().uncertainty(); }
-	relo->lon     = sc3relo->longitude().value();
-	try { relo->lonerr  = 0.5*(sc3relo->longitude().lowerUncertainty()+sc3relo->longitude().upperUncertainty()); }
-	catch ( ... ) { relo->lonerr  = sc3relo->longitude().uncertainty(); }
-	relo->dep     = sc3relo->depth().value();
-	try { relo->deperr  = 0.5*(sc3relo->depth().lowerUncertainty()+sc3relo->depth().upperUncertainty()); }
-	catch ( ... ) { relo->deperr  = sc3relo->depth().uncertainty(); }
-	relo->time    = double(sc3relo->time().value() - Seiscomp::Core::Time());
-	try { relo->timeerr = 0.5*(sc3relo->time().lowerUncertainty()+sc3relo->time().upperUncertainty()); }
-	catch ( ... ) { relo->timeerr = sc3relo->time().uncertainty(); }
+	relo->hypocenter.lat = screlo->latitude().value();
+	try { relo->hypocenter.laterr = 0.5*(screlo->latitude().lowerUncertainty() + screlo->latitude().upperUncertainty()); }
+	catch ( ... ) { relo->hypocenter.laterr = screlo->latitude().uncertainty(); }
+	relo->hypocenter.lon = screlo->longitude().value();
+	try { relo->hypocenter.lonerr = 0.5*(screlo->longitude().lowerUncertainty() + screlo->longitude().upperUncertainty()); }
+	catch ( ... ) { relo->hypocenter.lonerr = screlo->longitude().uncertainty(); }
+	relo->hypocenter.dep = screlo->depth().value();
+	try { relo->hypocenter.deperr = 0.5*(screlo->depth().lowerUncertainty() + screlo->depth().upperUncertainty()); }
+	catch ( ... ) { relo->hypocenter.deperr = screlo->depth().uncertainty(); }
+	relo->time = double(screlo->time().value() - Seiscomp::Core::Time());
+	try { relo->timeerr = 0.5*(screlo->time().lowerUncertainty() + screlo->time().upperUncertainty()); }
+	catch ( ... ) { relo->timeerr = screlo->time().uncertainty(); }
 
-	relo->methodID = sc3relo->methodID();
-	relo->earthModelID = sc3relo->earthModelID();
+	relo->methodID = screlo->methodID();
+	relo->earthModelID = screlo->earthModelID();
 
 	for (int i=0; i<arrivalCount; i++) {
 
 		Arrival &arr = relo->arrivals[i];
-		const string &pickID = sc3relo->arrival(i)->pickID();
+		const string &pickID = screlo->arrival(i)->pickID();
 
 		if (arr.pick->id != pickID) {
 			// If this should ever happen, let it bang loudly!
@@ -303,9 +307,9 @@ Origin* Locator::_sc3relocate(const Origin *origin)
 			exit(1);
 		}
 
-		arr.residual = sc3relo->arrival(i)->timeResidual();
-		arr.distance = sc3relo->arrival(i)->distance();
-		arr.azimuth  = sc3relo->arrival(i)->azimuth();
+		arr.residual = screlo->arrival(i)->timeResidual();
+		arr.distance = screlo->arrival(i)->distance();
+		arr.azimuth  = screlo->arrival(i)->azimuth();
 
 		if ( (arr.phase == "P" || arr.phase == "P1") && arr.distance > 115)
 			arr.phase = "PKP";
@@ -314,7 +318,7 @@ Origin* Locator::_sc3relocate(const Origin *origin)
 //			arr.residual = 0; // FIXME preliminary cosmetics;
 
 // We do not copy the weight back, because it is still there in the original arrival
-//		arr.weight   = sc3relo->arrival(i)->weight();
+//		arr.weight   = screlo->arrival(i)->weight();
 /*
 		if ( arr.residual > 800 && ( arr.phase=="P" || arr.phase=="Pdiff" ) && \
 		     arr.distance > 104 && arr.distance < 112) {
@@ -329,8 +333,8 @@ Origin* Locator::_sc3relocate(const Origin *origin)
 
 	relo->error.sdobs  = 1; // FIXME
 	double norm        = 1./relo->error.sdobs;
-	relo->error.sdepth = norm*sc3relo->depth().uncertainty() * 1.8;
-	relo->error.stime  = norm*sc3relo->time().uncertainty()  * 1.8;
+	relo->error.sdepth = norm*screlo->depth().uncertainty() * 1.8;
+	relo->error.stime  = norm*screlo->time().uncertainty()  * 1.8;
 	relo->error.conf   = 0; // FIXME
 
 	return relo;

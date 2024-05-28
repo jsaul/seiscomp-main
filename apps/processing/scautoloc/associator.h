@@ -40,7 +40,6 @@ class Associator
 
 	public:
 		Associator();
-		~Associator();
 
 	public:
 		void setStations(const StationMap *stations);
