@@ -25,7 +25,6 @@
 #include <set>
 #include <list>
 #include <math.h>
-using namespace std;
 
 #include "util.h"
 #include "sc3adapters.h"
@@ -35,14 +34,19 @@ using namespace std;
 
 namespace Autoloc {
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 static std::string station_key (const Station *station)
 {
 	return station->net + "." + station->code;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
 
 
 typedef std::set<PickCPtr> PickSet;
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void Nucleator::setStation(const Station *station)
 {
 	std::string key = station->net + "." + station->code;
@@ -50,31 +54,52 @@ void Nucleator::setStation(const Station *station)
 		return; // nothing to insert
 	_stations.insert(StationMap::value_type(key, station));
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const OriginVector &Nucleator::newOrigins() const {
 	return _newOrigins;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void GridSearch::setStation(const Station *station)
 {
 	Nucleator::setStation(station);
 	_relocator.setStation(station);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 GridSearch::GridSearch()
 {
 //	_stations = 0;
 	_abort = false;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void GridSearch::setSeiscompConfig(const Seiscomp::Config::Config *scconfig) {
 	_scconfig = scconfig;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool GridSearch::init()
 {
 	_relocator.setSeiscompConfig(_scconfig);
@@ -85,72 +110,112 @@ bool GridSearch::init()
 
 	return true;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool GridSearch::setGridFile(const std::string &gridfile)
 {
 	return _readGrid(gridfile);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void GridSearch::setLocatorProfile(const std::string &profile) {
 	_relocator.setProfile(profile);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 int GridSearch::cleanup(const Time& minTime)
 {
 	int count = 0;
 
-	for (Grid::iterator it=_grid.begin(); it!=_grid.end(); ++it) {
-
-		GridPoint *gridpoint = it->get();
+	for (auto& gridpoint: _grid) {
 		count += gridpoint->cleanup(minTime);
 	}
 
 	return count;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
 
 static int _projectedPickCount=0;
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ProjectedPick::ProjectedPick(const Time &t)
 	: _projectedTime(t)
 {
 	_projectedPickCount++;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ProjectedPick::ProjectedPick(PickCPtr p, StationWrapperCPtr w)
-	: _projectedTime(p->time - w->ttime), p(p), wrapper(w)
+	: p(p), wrapper(w), _projectedTime(p->time - w->ttime)
 {
 	_projectedPickCount++;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ProjectedPick::ProjectedPick(const ProjectedPick &other)
-	: _projectedTime(other._projectedTime), p(other.p), wrapper(other.wrapper)
+	: p(other.p), wrapper(other.wrapper), _projectedTime(other._projectedTime)
 {
 	_projectedPickCount++;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ProjectedPick::~ProjectedPick()
 {
 	_projectedPickCount--;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 int ProjectedPick::count()
 {
 	return _projectedPickCount;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 GridPoint::GridPoint(double latitude, double longitude, double depth)
-	: hypocenter(latitude, longitude, depth), _radius(4), _dt(50), maxStaDist(180), _nmin(6), _nminPrelim(4)
+	: hypocenter(latitude, longitude, depth), _radius(4), _dt(50), maxStaDist(180), _nmin(6)
 {
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const Origin*
 GridPoint::feed(const Pick* pick)
 {
@@ -190,14 +255,13 @@ GridPoint::feed(const Pick* pick)
 	/* std::multiset<ProjectedPick>::iterator latest = */ _picks.insert(pp);
 
 	// roughly test if there is a cluster around the new pick
+	std::vector<ProjectedPick> pps;
 	std::multiset<ProjectedPick>::iterator it,
 		lower  = _picks.lower_bound(pp.projectedTime() - _dt),
 		upper  = _picks.upper_bound(pp.projectedTime() + _dt);
-	std::vector<ProjectedPick> pps;
 	for (it=lower; it!=upper; ++it)
 		pps.push_back(*it);
-
-	int npick=pps.size();
+	size_t npick = pps.size();
 
 	// if the number of picks around the new pick is too low...
 	if (npick < _nmin)
@@ -205,19 +269,19 @@ GridPoint::feed(const Pick* pick)
 
 	// now take a closer look at how tightly clustered the picks are
 	double dt0 = 4; // XXX
-	std::vector<int> _cnt(npick);
-	std::vector<int> _flg(npick);
-	for (int i=0; i<npick; i++) {
+	std::vector<size_t> _cnt(npick);
+	std::vector<size_t> _flg(npick);
+	for (size_t i=0; i<npick; i++) {
 		_cnt[i] = _flg[i] = 0;
 	}
-	for (int i=0; i<npick; i++) {
+	for (size_t i=0; i<npick; i++) {
 
 		ProjectedPick &ppi = pps[i];
 		double t_i   = ppi.projectedTime();
 		double azi_i = ppi.wrapper->azimuth;
 		double slo_i = ppi.wrapper->hslow;
 
-		for (int k=i; k<npick; k++) {
+		for (size_t k=i; k<npick; k++) {
 
 			ProjectedPick &ppk = pps[k];
 			double t_k   = ppk.projectedTime();
@@ -231,22 +295,22 @@ GridPoint::feed(const Pick* pick)
 				_cnt[i]++;
 				_cnt[k]++;
 
-				if(ppi.p == pp.p || ppk.p == pp.p)
+				if (ppi.p == pp.p || ppk.p == pp.p)
 					_flg[k] = _flg[i] = 1;
 			}
 		}
 	}
 
-	int sum=0;
-	for (int i=0; i<npick; i++)
+	size_t sum=0;
+	for (size_t i=0; i<npick; i++)
 		sum += _flg[i];
 	if (sum < _nmin)
 		return nullptr;
 
 	std::vector<ProjectedPick> group;
-	int cntmax = 0;
+	size_t cntmax = 0;
 	Time otime;
-	for (int i=0; i<npick; i++) {
+	for (size_t i=0; i<npick; i++) {
 		if ( ! _flg[i])
 			continue;
 		group.push_back(pps[i]);
@@ -260,21 +324,21 @@ GridPoint::feed(const Pick* pick)
 // vvvvvvvvvvvvv Iteration
 
 	std::vector<double> ptime(npick);
-	for (int i=0; i<npick; i++) {
+	for (size_t i=0; i<npick; i++) {
 		ptime[i] = pps[i].projectedTime();
 	}
 
 	Origin* _origin = new Origin(hypocenter.lat, hypocenter.lon, hypocenter.dep, otime);
 
 	// add Picks/Arrivals to that newly created Origin
-	set<string> stations;
-	for (unsigned int i=0; i<group.size(); i++) {
+	std::set<std::string> stations;
+	for (size_t i=0; i<group.size(); i++) {
 		const ProjectedPick &pp = group[i];
 
 		PickCPtr pick = pp.p;
 		const std::string key = station_key(pick->station());
 		// avoid duplicate stations XXX ugly without amplitudes
-		if( stations.count(key))
+		if ( stations.count(key))
 			continue;
 		stations.insert(key);
 
@@ -297,9 +361,12 @@ GridPoint::feed(const Pick* pick)
 
 	return _origin;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 int GridPoint::cleanup(const Time& minTime)
 {
 	int count = 0;
@@ -313,9 +380,12 @@ int GridPoint::cleanup(const Time& minTime)
 
 	return count;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool GridPoint::setupStation(const Station *station)
 {
 	double delta=0, az=0, baz=0;
@@ -337,8 +407,12 @@ bool GridPoint::setupStation(const Station *station)
 
 	return true;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 static double avgfn2(double x)
 {
 	const double w = 0.2; // plateau width
@@ -353,14 +427,23 @@ static double avgfn2(double x)
 	x = 0.5*(cos(x*M_PI)+1);
 	return x*x;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 static double depthFactor(double depth)
 {
 	// straight line, easy (but also risky!) to be made configurable
 	return 1+0.0005*(200-depth);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 static PickSet originPickSet(const Origin *origin)
 {
 	PickSet picks;
@@ -373,7 +456,12 @@ static PickSet originPickSet(const Origin *origin)
 
 	return picks;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 double originScore(const Origin *origin, double maxRMS, double networkSizeKm)
 {
 	((Origin*)origin)->arrivals.sort();
@@ -398,7 +486,6 @@ double originScore(const Origin *origin, double maxRMS, double networkSizeKm)
 		if ( snr > 100 )
 			snr = 100;
 
-		// FIXME: This is HIGHLY experimental:
 		// For a manual pick without SNR, as produced by
 		// scolv, we assume a default value.
 		if (manual(pick.get()) && pick->snr <= 0)
@@ -411,7 +498,6 @@ double originScore(const Origin *origin, double maxRMS, double networkSizeKm)
 		double snrScore = log10(snr);
 
 		double d = arr.distance;
-		// FIXME: This is HIGHLY experimental:
 		// For a small, dense network the distance score must decay quickly with distance
 		// whereas for teleseismic usages it must be a much broader function
 		double r = networkSizeKm <= 0 ? pick->station()->maxNucDist : (0.5*networkSizeKm/111.195);
@@ -504,32 +590,33 @@ double originScore(const Origin *origin, double maxRMS, double networkSizeKm)
 
 	return score;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 static Origin* bestOrigin(OriginVector &origins)
 {
 	double maxScore = 0;
-	Origin* best = 0;
+	Origin* best = nullptr;
 
-	for (OriginVector::iterator
-	     it = origins.begin(); it != origins.end(); ++it) {
-
-		Origin* origin = (*it).get();
-		double score = originScore(origin);
+	for (auto& origin : origins) {
+		double score = originScore(origin.get());
 		if (score > maxScore) {
 			maxScore = score;
-			best = origin;
+			best = origin.get();
 		}
 	}
 
 	return best;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool GridSearch::feed(const Pick *pick)
 {
 	_newOrigins.clear();
@@ -630,19 +717,13 @@ bool GridSearch::feed(const Pick *pick)
 	}
 
 	OriginVector tempOrigins;
-	for (std::map<PickSet, OriginPtr>::iterator
-	     it = pickSetOriginMap.begin(); it != pickSetOriginMap.end(); ++it) {
-
-		Origin *origin = (*it).second.get();
+	for (auto& item: pickSetOriginMap) {
+		Origin *origin = item.second.get();
 		if (originScore(origin) < 0.6*maxScore) {
 			continue;
 		}
 
-// XXX XXX XXX XXX XXX
-// Hier nur jene Origins aus Gridsearch zulassen, die nicht mehrheitlich aus assoziierten Picks bestehen.
-// XXX XXX XXX XXX XXX
-
-		_relocator.useFixedDepth(true); // XXX vorher true
+		_relocator.useFixedDepth(true);
 		OriginPtr relo = _relocator.relocate(origin);
 		if ( !relo ) {
 			continue;
@@ -677,11 +758,15 @@ bool GridSearch::feed(const Pick *pick)
 
 	return _newOrigins.size() > 0;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool GridSearch::_readGrid(const std::string &gridfile)
 {
-	ifstream ifile(gridfile.c_str());
+	std::ifstream ifile(gridfile.c_str());
 
 	if ( ifile.good() ) {
 		SEISCOMP_DEBUG_S("Reading grid file for nucleator: " + gridfile);
@@ -718,11 +803,17 @@ bool GridSearch::_readGrid(const std::string &gridfile)
 	SEISCOMP_DEBUG("read %d grid lines",int(_grid.size()));
 	return true;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void GridSearch::setup()
 {
 //	_relocator.setStations(_stations);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
 } // namespace Autoloc

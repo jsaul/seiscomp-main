@@ -244,11 +244,7 @@ class GridPoint : public Seiscomp::Core::BaseObject
 		// config
 		double _radius, _dt;
 		double maxStaDist;
-		int _nmin;
-
-		// min. number of picks for prelim. alert if all picks are XXL
-		// XXX NOT YET USED XXX
-		int _nminPrelim;
+		size_t _nmin;
 
 	private:
 		std::map<std::string, StationWrapperCPtr> _wrappers;

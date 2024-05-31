@@ -24,11 +24,17 @@ using namespace std;
 namespace Autoloc {
 
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 StationConfig::StationConfig() {
 	string defaultkey = "* *";
 	_entry[defaultkey] = Entry();
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool StationConfig::read(const std::string &fname) {
 	string line;
 	string defaultkey = "* *";
@@ -58,8 +64,12 @@ bool StationConfig::read(const std::string &fname) {
 
 	return true;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const StationConfig::Entry&
 StationConfig::get(const string &net, const string &sta) const {
 	vector<string> patterns;
@@ -87,7 +97,12 @@ StationConfig::get(const string &net, const string &sta) const {
 //	return _entry[defaultkey];
 	return _entry.begin()->second;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void Autoloc3::Config::dump() const {
 	SEISCOMP_INFO("Configuration:");
 	SEISCOMP_INFO("  locator");
@@ -136,5 +151,7 @@ void Autoloc3::Config::dump() const {
 	SEISCOMP_INFO("  xxl.deadTime                      %g s",  xxlDeadTime);
 //	SEISCOMP_INFO("maxRadiusFactor                  %g", 	 maxRadiusFactor);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
 }  // namespace Autoloc

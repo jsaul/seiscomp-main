@@ -224,7 +224,6 @@ void App::createCommandLineDescription() {
 	                        "as configured in 'processing.whitelist.agencies'. "
 	                        "Imported origins are not relocated and only used "
 	                        "for phase association.");
-//	commandline().addOption("Settings", "resend-imported-origins", "Re-send imported origins after phase association");
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -303,7 +302,6 @@ bool App::validateParameters() {
 		_config.pickLogEnable = true;
 	}
 
-	// return Client::Application::validateParameters();
 	return true;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -586,7 +584,6 @@ bool App::init() {
 		}
 	}
 	else {
-		// Read historical preferred origins in case we missed something
 // TEMP		readHistoricEvents();
 		if ( _wakeUpTimout > 0 ) {
 			enableTimer(_wakeUpTimout);
@@ -608,6 +605,25 @@ bool App::initInventory() {
 		if ( ! inventory ) {
 			SEISCOMP_ERROR("no inventory!");
 			return false;
+		}
+
+		// Remove unneeded inventory items to save some memory
+		for ( size_t n = 0; n < inventory->networkCount(); ++n ) {
+			DataModel::Network *network = inventory->network(n);
+
+			for ( size_t s = 0; s < network->stationCount(); ++s ) {
+				DataModel::Station *station = network->station(s);
+
+				for ( size_t l = 0; l < station->sensorLocationCount(); ++l ) {
+					DataModel::SensorLocation *sensorLocation = station->sensorLocation(l);
+					while (sensorLocation->streamCount())
+						sensorLocation->removeStream(0);
+					while (sensorLocation->auxStreamCount())
+						sensorLocation->removeAuxStream(0);
+					while (sensorLocation->commentCount())
+						sensorLocation->removeComment(0);
+				}
+			}
 		}
 	}
 	else {
@@ -677,8 +693,8 @@ bool App::initOneStation(const DataModel::WaveformStreamID &wfid, const Core::Ti
 			               epochStart.c_str(),
 			               epochEnd.c_str());
 
-			double elev = 0;
-			try { elev = station->elevation(); }
+			double elevation = 0;
+			try { elevation = station->elevation(); }
 			catch ( ... ) {}
 			::Autoloc::Station *sta =
 				new ::Autoloc::Station(
@@ -686,7 +702,7 @@ bool App::initOneStation(const DataModel::WaveformStreamID &wfid, const Core::Ti
 					network->code(),
 					station->latitude(),
 					station->longitude(),
-					elev);
+					elevation);
 
 			sta->used = true;
 			sta->maxNucDist = _config.defaultMaxNucDist;
@@ -724,15 +740,14 @@ void App::readHistoricEvents() {
 	// probably in the future but because of timing differences between
 	// different computers: safety first!
 	Core::Time now = Core::Time::GMT();
-	DataModel::DatabaseIterator it =
-		query()->getPreferredOrigins(now - Core::TimeSpan(_keepEventsTimeSpan),
-		                             now + Core::TimeSpan(_keepEventsTimeSpan), "");
-
 	OriginList preferredOrigins;
 	PickIds pickIds;
 
 	// Store all preferred origins
-	for ( ; it.get() != NULL; ++it ) {
+	DataModel::DatabaseIterator it =
+		query()->getPreferredOrigins(now - Core::TimeSpan(_keepEventsTimeSpan),
+		                             now + Core::TimeSpan(_keepEventsTimeSpan), "");
+	for ( ; it.get() != nullptr; ++it ) {
 		DataModel::OriginPtr origin = DataModel::Origin::Cast(it.get());
 		if ( origin )
 			preferredOrigins.push_back(origin);
@@ -740,11 +755,9 @@ void App::readHistoricEvents() {
 	it.close();
 
 	// Store all pickIDs of all origins and remove duplicates
-	for ( OriginList::iterator it = preferredOrigins.begin();
-	      it != preferredOrigins.end(); ++it ) {
-		DataModel::OriginPtr origin = *it;
+	for (auto& origin : preferredOrigins) {
 		if ( origin->arrivalCount() == 0 ) {
-			query()->loadArrivals(it->get());
+			query()->loadArrivals(origin.get());
 			for ( size_t i = 0; i < origin->arrivalCount(); ++i )
 				pickIds.insert(origin->arrival(i)->pickID());
 		}
@@ -753,10 +766,9 @@ void App::readHistoricEvents() {
 	}
 
 	// Read all picks out of the database
-	for ( PickIds::iterator it = pickIds.begin();
-	      it != pickIds.end(); ++it ) {
+	for ( const std::string& pickID : pickIds ) {
 
-		DataModel::ObjectPtr obj = query()->getObject(DataModel::Pick::TypeInfo(), *it);
+		DataModel::ObjectPtr obj = query()->getObject(DataModel::Pick::TypeInfo(), pickID);
 		if ( !obj ) {
 			continue;
 		}

@@ -34,14 +34,11 @@ static int _pickCount=0;
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Pick::Pick(const std::string &id, const std::string &net, const std::string &sta, const Time &time)
-	: id(id), net(net), sta(sta), time(time)
+	: id(id), net(net), sta(sta),
+	  time(time), amp(0), per(0), snr(0), normamp(0),
+	  mode(Automatic), xxl(false), _originID(0), _station(nullptr)
 {
-	amp = snr = per = 0;
-	xxl = false;
-	_station = NULL;
-	_originID = 0;
 	_pickCount++;
-	mode = Automatic;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -51,8 +48,6 @@ Pick::Pick(const std::string &id, const std::string &net, const std::string &sta
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Pick::~Pick()
 {
-	_station = NULL;
-	_originID = 0;
 	_pickCount--;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -92,11 +87,10 @@ void Pick::setOrigin(OriginID id) const
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Arrival::Arrival(const Pick *pick, const std::string &phase, double residual)
-	: origin(nullptr), pick(pick), phase(phase), residual(residual)
+	: origin(nullptr), pick(pick), phase(phase), residual(residual),
+	  distance(0), azimuth(0), affinity(0),
+	  score(0), ascore(0), dscore(0), tscore(0), excluded(NotExcluded)
 {
-	excluded = NotExcluded;
-	score = 0;
-	ascore = dscore = tscore = 0;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -105,10 +99,10 @@ Arrival::Arrival(const Pick *pick, const std::string &phase, double residual)
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Arrival::Arrival(const Origin *origin, const Pick *pick, const std::string &phase, double residual, double affinity)
-	: origin(origin), pick(pick), phase(phase), residual(residual), affinity(affinity)
+	: origin(origin), pick(pick), phase(phase), residual(residual),
+	  affinity(affinity),
+	  score(0), ascore(0), dscore(0), tscore(0), excluded(NotExcluded)
 {
-	score = 0;
-	ascore = dscore = tscore = 0;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -138,23 +132,21 @@ bool operator<(const Arrival& a, const Arrival& b) {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool ArrivalVector::sort()
 {
-	std::sort(begin(),end());
+	std::sort(begin(), end());
 	return false;
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
-static int _originCount = 0;
+static size_t _originCount {0};
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Origin::Origin(double lat, double lon, double dep, const Time &time)
-	: hypocenter(lat, lon, dep), time(time), timeerr(0)
+	: id(0), hypocenter(lat, lon, dep), time(time), timeerr(0),
+	  imported(false), preliminary(false)
 {
-//	id = _i++;
-	id = 0;
 	_originCount++;
-	imported = preliminary = false;
 	processingStatus = New;
 	locationStatus = Automatic;
 	depthType = DepthFree;
@@ -219,7 +211,7 @@ int Origin::findArrival(const Pick *pick) const
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void Origin::updateFrom(const Origin *other)
 {
-	unsigned long _id = id;
+	size_t _id = id;
 	*this = *other;
 	arrivals = other->arrivals;
 	id = _id;
@@ -249,7 +241,7 @@ bool Origin::add(const Arrival &arr)
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 size_t Origin::phaseCount(double dmin, double dmax) const
 {
-	size_t count = 0;
+	size_t count {0};
 
 	for (const Arrival &arr : arrivals) {
 
@@ -276,7 +268,7 @@ size_t Origin::phaseCount(double dmin, double dmax) const
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 size_t Origin::definingPhaseCount(double dmin, double dmax) const
 {
-	size_t count = 0;
+	size_t count {0};
 
 	for (const Arrival &arr : arrivals) {
 
@@ -454,9 +446,9 @@ bool OriginVector::find(const Origin *origin) const
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Origin* OriginVector::find(const OriginID &id)
 {
-	for (iterator it=begin(); it!=end(); ++it) {
-		if (id == (*it)->id)
-			return (*it).get();
+	for (auto& item: *this) {
+		if (id == item->id)
+			return item.get();
 	}
 	return nullptr;
 }
@@ -468,7 +460,7 @@ Origin* OriginVector::find(const OriginID &id)
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 static size_t countCommonPicks(const Origin *origin1, const Origin *origin2)
 {
-	size_t count = 0;
+	size_t count {0};
 	for (const Arrival& arr1 : origin1->arrivals) {
 		for (const Arrival& arr2 : origin2->arrivals) {
 			if (arr1.pick == arr2.pick)
@@ -486,8 +478,8 @@ static size_t countCommonPicks(const Origin *origin1, const Origin *origin2)
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const Origin *OriginVector::bestEquivalentOrigin(const Origin *origin) const
 {
-	const Origin *best = 0;
-	size_t maxCommonPickCount = 0;
+	const Origin *best {nullptr};
+	size_t maxCommonPickCount {0};
 
 	for (const auto& item : *this) {
 

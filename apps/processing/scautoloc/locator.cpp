@@ -17,7 +17,6 @@
 
 #include <string>
 #include <vector>
-#include <map>
 
 #include <seiscomp/datamodel/pick.h>
 #include <seiscomp/datamodel/origin.h>
@@ -26,16 +25,22 @@
 #include "sc3adapters.h"
 #include "locator.h"
 
-using namespace std;
 
 namespace Autoloc {
 
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 MySensorLocationDelegate::~MySensorLocationDelegate() {
 	_sensorLocations.clear();
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void MySensorLocationDelegate::setStation(const Autoloc::Station *station) {
-	string key = station->net + "." + station->code;
+	std::string key = station->net + "." + station->code;
 
 	Seiscomp::DataModel::SensorLocationPtr
 		sloc = Seiscomp::DataModel::SensorLocation::Create();
@@ -43,9 +48,14 @@ void MySensorLocationDelegate::setStation(const Autoloc::Station *station) {
 	sloc->setLatitude(  station->lat  );
 	sloc->setLongitude( station->lon  );
 	sloc->setElevation( station->alt  );
-	_sensorLocations.insert(pair<string,Seiscomp::DataModel::SensorLocationPtr>(key, sloc));
+	_sensorLocations.insert(std::pair<std::string,Seiscomp::DataModel::SensorLocationPtr>(key, sloc));
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Seiscomp::DataModel::SensorLocation *
 MySensorLocationDelegate::getSensorLocation(Seiscomp::DataModel::Pick *pick) const {
 	if ( !pick )
@@ -59,21 +69,34 @@ MySensorLocationDelegate::getSensorLocation(Seiscomp::DataModel::Pick *pick) con
 
 	return nullptr;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Locator::Locator()
 	: _scconfig(nullptr)
 {
 	_minDepth = 5;
 	_locatorCallCounter = 0;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void Locator::setSeiscompConfig(const Seiscomp::Config::Config *scconfig)
 {
 	_scconfig = scconfig;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool Locator::init()
 {
 	if ( !_scconfig) {
@@ -100,25 +123,41 @@ bool Locator::init()
 
 	return true;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Locator::~Locator()
 {
 	SEISCOMP_INFO("Locator instance called %ld times", _locatorCallCounter);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void Locator::setStation(const Autoloc::Station *station) {
 	sensorLocationDelegate->setStation(station);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void Locator::setMinimumDepth(double depth)
 {
 	_minDepth = depth;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 static bool hasFixedDepth(const Origin *origin)
 {
 	switch(origin->depthType) {
@@ -130,8 +169,12 @@ static bool hasFixedDepth(const Origin *origin)
 	}
 	return false;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Origin *Locator::relocate(const Origin *origin)
 {
 	_locatorCallCounter++;
@@ -182,8 +225,12 @@ Origin *Locator::relocate(const Origin *origin)
 
 	return relo;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Origin* Locator::_screlocate(const Origin *origin)
 {
 	// convert origin to SC, relocate, and convert the result back
@@ -199,10 +246,10 @@ Origin* Locator::_screlocate(const Origin *origin)
 	Seiscomp::DataModel::RealQuantity scrq;
 
 /*
-	if(fixedDepth>=0) {
+	if (fixedDepth >= 0) {
 		setFixedDepth(fixedDepth);
 	}
-	else if(_useFixedDepth==true) {
+	else if (_useFixedDepth == true) {
 		setFixedDepth(origin->dep);
 	}
 	else
@@ -211,7 +258,7 @@ Origin* Locator::_screlocate(const Origin *origin)
 
 	// Store SC Picks/Stations here so that they can be found
 	// by LocSAT via SC PublicObject lookup
-	vector<Seiscomp::DataModel::PublicObjectPtr> scobjects;
+	std::vector<Seiscomp::DataModel::PublicObjectPtr> scobjects;
 
 	int arrivalCount = origin->arrivals.size();
 	for (int i=0; i<arrivalCount; i++) {
@@ -299,7 +346,7 @@ Origin* Locator::_screlocate(const Origin *origin)
 	for (int i=0; i<arrivalCount; i++) {
 
 		Arrival &arr = relo->arrivals[i];
-		const string &pickID = screlo->arrival(i)->pickID();
+		const std::string &pickID = screlo->arrival(i)->pickID();
 
 		if (arr.pick->id != pickID) {
 			// If this should ever happen, let it bang loudly!
@@ -320,7 +367,7 @@ Origin* Locator::_screlocate(const Origin *origin)
 // We do not copy the weight back, because it is still there in the original arrival
 //		arr.weight   = screlo->arrival(i)->weight();
 /*
-		if ( arr.residual > 800 && ( arr.phase=="P" || arr.phase=="Pdiff" ) && \
+		if ( arr.residual > 800 && ( arr.phase == "P" || arr.phase == "Pdiff" ) && \
 		     arr.distance > 104 && arr.distance < 112) {
 
 			Seiscomp::TravelTime tt;
@@ -339,14 +386,18 @@ Origin* Locator::_screlocate(const Origin *origin)
 
 	return relo;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool determineAzimuthalGaps(const Origin *origin, double *primary, double *secondary)
 {
-	vector<double> azi;
+	std::vector<double> azi;
 
-	int arrivalCount = origin->arrivals.size();
-	for (int i=0; i<arrivalCount; i++) {
+	size_t arrivalCount = origin->arrivals.size();
+	for (size_t i=0; i<arrivalCount; i++) {
 
 		const Arrival &arr = origin->arrivals[i];
 	
@@ -359,14 +410,14 @@ bool determineAzimuthalGaps(const Origin *origin, double *primary, double *secon
 	if (azi.size() < 2)
 		return false;
 
-	sort(azi.begin(), azi.end());
+	std::sort(azi.begin(), azi.end());
 
 	*primary = *secondary = 0.;
-	int aziCount = azi.size();
+	size_t aziCount = azi.size();
 	azi.push_back(azi[0] + 360.);
 	azi.push_back(azi[1] + 360.);
 
-	for (int i=0; i<aziCount; i++) {
+	for (size_t i=0; i<aziCount; i++) {
 		double gap = azi[i+1]-azi[i];
 		if (gap > *primary)
 			*primary = gap;
@@ -377,6 +428,7 @@ bool determineAzimuthalGaps(const Origin *origin, double *primary, double *secon
 	
 	return true;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 

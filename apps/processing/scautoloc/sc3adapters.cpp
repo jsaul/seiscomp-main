@@ -36,13 +36,17 @@
 #include "datamodel.h"
 
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Seiscomp::Core::Time sctime(const Autoloc::Time &time)
 {
 	return Seiscomp::Core::Time() + Seiscomp::Core::TimeSpan(time);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Seiscomp::DataModel::Origin *convertToSC(const Autoloc::Origin* origin, bool allPhases)
 {
 	using namespace Autoloc;
@@ -178,8 +182,12 @@ Seiscomp::DataModel::Origin *convertToSC(const Autoloc::Origin* origin, bool all
 
 	return scorigin;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Autoloc::Origin *Seiscomp::Applications::Autoloc::App::convertFromSC(const Seiscomp::DataModel::Origin *scorigin)
 {
 	double lat = scorigin->latitude().value();
@@ -329,7 +337,12 @@ Autoloc::Origin *Seiscomp::Applications::Autoloc::App::convertFromSC(const Seisc
 
 	return origin;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Autoloc::Pick *Seiscomp::Applications::Autoloc::App::convertFromSC(const Seiscomp::DataModel::Pick *scpick)
 {
 	const std::string &id  = scpick->publicID();
@@ -350,4 +363,4 @@ Autoloc::Pick *Seiscomp::Applications::Autoloc::App::convertFromSC(const Seiscom
 
 	return pick;
 }
-
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

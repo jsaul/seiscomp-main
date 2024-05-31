@@ -132,7 +132,7 @@ class Arrival
 		float affinity;
 		float score;
 
-		float dscore, ascore, tscore;
+		float ascore, dscore, tscore;
 
 		// Reasons for why a pick may be excluded from the computation
 		// of an origin. This allows exclusion of suspicious picks
