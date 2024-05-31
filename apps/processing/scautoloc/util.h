@@ -47,15 +47,6 @@ int numberOfDefiningPhases(const Origin &origin);
 typedef Seiscomp::TravelTime TravelTime;
 bool travelTimeP (double lat1, double lon1, double dep1, double lat2, double lon2, double alt2, double delta, TravelTime&);
 
-// 1st arrival P incl. Pdiff up to 130 deg, no PKP
-bool travelTimeP1(double lat1, double lon1, double dep1, double lat2, double lon2, double alt2, double delta, TravelTime&);
-
-// 1st arrival PK* incl. PKP*, PKiKP
-bool travelTimePK(double lat1, double lon1, double dep1, double lat2, double lon2, double alt2, double delta, TravelTime&);
-
-
-TravelTime travelTimePP(double lat1, double lon1, double dep1, double lat2, double lon2, double alt2, double delta);
-
 std::string time2str(const Time &t);
 
 namespace Utils {

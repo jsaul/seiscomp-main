@@ -39,75 +39,123 @@
 namespace Autoloc {
 
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void delazi(double lat1, double lon1, double lat2, double lon2,
             double &delta, double &az1, double &az2)
 {
 	Seiscomp::Math::Geo::delazi(lat1, lon1, lat2, lon2, &delta, &az1, &az2);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 void delazi(const Hypocenter *hypo, const Station *station,
             double &delta, double &az1, double &az2)
 {
 	Seiscomp::Math::Geo::delazi(hypo->lat, hypo->lon, station->lat, station->lon, &delta, &az1, &az2);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 double distance(const Station* s1, const Station* s2)
 {
 	double delta, az, baz;
 	delazi(s1->lat, s1->lon, s2->lat, s2->lon, delta, az, baz);
 	return delta;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 std::string printDetailed(const Origin *origin)
 {
 	return printOrigin(origin, false);
 }
 
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 std::string printOneliner(const Origin *origin)
 {
 	return printOrigin(origin, true);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool automatic(const Pick *pick)
 {
 	return pick->mode == Pick::Automatic;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool ignored(const Pick *pick)
 {
 	return pick->mode == Pick::IgnoredAutomatic;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool manual(const Pick *pick)
 {
 	return pick->mode == Pick::Manual;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 char modeFlag(const Pick *pick)
 {
 	return automatic(pick) ? 'A' : 'M';
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 bool hasAmplitude(const Pick *pick)
 {
 	if (pick->amp <= 0)
 		return false;
 	return true;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
-bool travelTimeP(double lat1, double lon1, double dep1, double lat2, double lon2, double alt2, double delta, TravelTime &tt)
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+bool travelTimeP(double lat1, double lon1, double dep1, double lat2, double lon2, double alt2, double delta, TravelTime &result)
 {
 	static Seiscomp::TravelTimeTable ttt;
 
 	Seiscomp::TravelTimeList
 		*ttlist = ttt.compute(lat1, lon1, dep1, lat2, lon2, alt2);
 
-	for (Seiscomp::TravelTimeList::iterator
-	     it = ttlist->begin(); it != ttlist->end(); ++it) {
-		tt = *it;
+	for (auto& tt : *ttlist) {
+		result = tt;
 		if (delta < 114)
 			// for  distances < 114, allways take 1st arrival
 			break;
@@ -121,67 +169,12 @@ bool travelTimeP(double lat1, double lon1, double dep1, double lat2, double lon2
 
 	return true;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-// 1st arrival P incl. Pdiff up to 130 deg, no PKP
-bool travelTimeP1(double lat1, double lon1, double dep1, double lat2, double lon2, double alt2, double delta, TravelTime &tt)
-{
-	if (delta > 130) // negotiable ;)
-		return false;
 
-	static Seiscomp::TravelTimeTable ttt;
 
-	Seiscomp::TravelTimeList
-		*ttlist = ttt.compute(lat1, lon1, dep1, lat2, lon2, alt2, alt2);
-	tt = *(ttlist->begin());
-	delete ttlist;
 
-	return true;
-}
-
-bool travelTimePK(double lat1, double lon1, double dep1, double lat2, double lon2, double alt2, double delta, TravelTime &tt)
-{
-	if (delta < 30) // negotiable ;)
-		return false;
-
-	static Seiscomp::TravelTimeTable ttt;
-
-	Seiscomp::TravelTimeList
-		*ttlist = ttt.compute(lat1, lon1, dep1, lat2, lon2, alt2);
-
-	for (Seiscomp::TravelTimeList::iterator
-	     it = ttlist->begin(); it != ttlist->end(); ++it) {
-		tt = *it;
-		if (tt.phase.substr(0,3) == "PKP" || tt.phase == "PKiKP")
-			break;
-	}
-	delete ttlist;
-
-	return true;
-}
-
-TravelTime travelTimePP(double lat1, double lon1, double dep1, double lat2, double lon2, double alt2, double delta)
-{
-	static Seiscomp::TravelTimeTable ttt;
-
-	Seiscomp::TravelTimeList
-		*ttlist = ttt.compute(lat1, lon1, dep1, lat2, lon2, alt2);
-	TravelTime tt;
-
-	for (Seiscomp::TravelTimeList::iterator
-	     it = ttlist->begin(); it != ttlist->end(); ++it) {
-		tt = *it;
-		if (tt.phase == "PP")
-			break;
-		if (tt.phase == "PnPn")
-			break;
-	}
-	delete ttlist;
-
-	// FIXME check if tt.phase == "PnPn" || tt.phase == "PP"
-	// Otherwise throw exception
-	return tt;
-}
-
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 static Time str2time(const std::string &s)
 {
 	Seiscomp::Core::Time t;
@@ -191,13 +184,22 @@ static Time str2time(const std::string &s)
 	}
 	return Time(t);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 std::string time2str(const Time &t)
 {
 	return sctime(t).toString("%F %T.%f000000").substr(0,21);
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 double meandev(const Origin* origin)
 {
 	double cumresid {0};
@@ -215,7 +217,12 @@ double meandev(const Origin* origin)
 
 	return cumresid/cumweight;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 double avgfn(double x)
 {
 	if (x<-1 || x>1)
@@ -225,8 +232,12 @@ double avgfn(double x)
 	x = cos(x);
 	return x*x;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 std::string printOrigin(const Origin *origin, bool oneliner)
 {
 	assert(origin);
@@ -330,10 +341,14 @@ std::string printOrigin(const Origin *origin, bool oneliner)
 	}
 	return out.str();
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
 
 
 namespace Utils {
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 StationMap *readStationLocations(const std::string &fname)
 {
 	StationMap *stations = new StationMap;
@@ -358,19 +373,21 @@ StationMap *readStationLocations(const std::string &fname)
 
 	return stations;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
 
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Seiscomp::DataModel::Inventory* inventoryFromStationLocationFile(const std::string &filename) {
                 // read inventory from station locations file
-                StationMap *stations = readStationLocations(filename);
+                StationMap *stationMap = readStationLocations(filename);
 
 		Seiscomp::DataModel::Inventory *inventory = new Seiscomp::DataModel::Inventory;
-                for (StationMap::iterator
-                     it=stations->begin(); it!=stations->end(); ++it) {
-                        std::string key = (*it).first;
-                        const Station *s = (*it).second.get();
+		for (auto& item : *stationMap) {
+
+                        std::string key = item.first;
+                        const Station *s = item.second.get();
 			std::string netId = "Network/"+s->net;
 			Seiscomp::DataModel::Network *network = inventory->findNetwork(netId);
                         if ( ! network) {
@@ -387,7 +404,7 @@ Seiscomp::DataModel::Inventory* inventoryFromStationLocationFile(const std::stri
                         station->setElevation(s->alt);
                         network->add(station);
                 }
-                delete stations;
+                delete stationMap;
 
 		return inventory;
 }
@@ -396,8 +413,7 @@ Seiscomp::DataModel::Inventory* inventoryFromStationLocationFile(const std::stri
 
 
 
-
-
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Pick* readPickLine()
 {
 	PickVector picks;
@@ -424,8 +440,12 @@ Pick* readPickLine()
 
 	return pick;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 PickVector readPickFile()
 {
 	PickVector picks;
@@ -436,7 +456,12 @@ PickVector readPickFile()
 
 	return picks;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 Pick::Mode mode(const Seiscomp::DataModel::Pick *pick) {
 	try {
 		switch ( pick->evaluationMode() ) {
@@ -454,6 +479,8 @@ Pick::Mode mode(const Seiscomp::DataModel::Pick *pick) {
 
 	return Pick::Automatic;
 }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
 } // namespace Autoloc::Utils
 } // namespace Autoloc
@@ -463,25 +490,26 @@ namespace Seiscomp {
 namespace Math {
 namespace Statistics {
 
-double rms(const std::vector<double> &v, double offset /* = 0 */)
+double rms(const std::vector<double> &v, double offset)
 {
-	unsigned int n = v.size();
-	const double *f = &v[0];
-	double fi, r=0;
+	double r{0};
+
+	if (v.empty())
+		return 0;
 
 	if (offset) {
-		for (size_t i=0; i<n; i++, f++) {
-			fi = ((*f)-offset);
-			r += fi*fi;
+		for (double f : v) {
+			f -= offset;
+			r += f*f;
 		}
 	}
 	else {
-		for (size_t i=0; i<n; i++, f++) {
-			r += (*f)*(*f);
+		for (double f : v) {
+			r += f*f;
 		}
 	}
 
-	return sqrt(r/n);
+	return sqrt(r/v.size());
 }
 
 } // namespace Statistics
