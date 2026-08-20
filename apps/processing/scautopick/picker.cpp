@@ -423,7 +423,7 @@ bool App::init() {
 		recordStream()->setStartTime(Core::Time::UTC() - Core::TimeSpan(_config.leadTime));
 	}
 
-	if ( configModule() != NULL ) {
+	if ( configModule() ) {
 		_config.useAllStreams = false;
 		//cerr << "Reading configured streams:" << endl;
 
@@ -438,7 +438,7 @@ bool App::init() {
 
 	if ( !_config.pickerType.empty() ) {
 		PickerPtr proc = PickerFactory::Create(_config.pickerType.c_str());
-		if ( proc == NULL ) {
+		if ( !proc ) {
 			SEISCOMP_ERROR("Unknown picker: %s", _config.pickerType.c_str());
 			return false;
 		}
@@ -458,7 +458,7 @@ bool App::init() {
 
 	if ( !_config.secondaryPickerType.empty() ) {
 		SecondaryPickerPtr proc = SecondaryPickerFactory::Create(_config.secondaryPickerType.c_str());
-		if ( proc == NULL ) {
+		if ( !proc ) {
 			SEISCOMP_ERROR("Unknown secondary picker: %s", _config.secondaryPickerType.c_str());
 			return false;
 		}
@@ -478,7 +478,7 @@ bool App::init() {
 
 	if ( !_config.featureExtractionType.empty() ) {
 		FXPtr proc = FXFactory::Create(_config.featureExtractionType.c_str());
-		if ( proc == NULL ) {
+		if ( !proc ) {
 			SEISCOMP_ERROR("Unknown fx: %s", _config.featureExtractionType.c_str());
 			return false;
 		}
@@ -542,7 +542,7 @@ bool App::init() {
 		const string& cfgLoc = it->second.locationCode;
 		const string& cfgCha = it->second.channel;
 
-		auto addDataChannel = 
+		auto addDataChannel =
 			[this, cfgNet, cfgSta, cfgLoc, &subscribeStreams](const string & cha, bool verbose=true) {
 				string streamID = cfgNet + "." + cfgSta + "." + cfgLoc + "." + cha;
 				if ( subscribeStreams.find(streamID) == subscribeStreams.end() ) {
@@ -745,7 +745,7 @@ void App::done() {
 		ar.close();
 		cerr << "Found "<< _ep->pickCount() << " picks and "
 		     << _ep->amplitudeCount() << " amplitudes" << endl;
-		_ep = NULL;
+		_ep = nullptr;
 	}
 
 	Processing::Application::done();
@@ -872,7 +872,7 @@ bool App::initProcessor(Processing::WaveformProcessor *proc,
 				Client::Inventory::Instance()->getSensorLocation(
 					waveformID.networkCode(), waveformID.stationCode(), waveformID.locationCode(), time);
 
-			if ( loc == NULL ) {
+			if ( !loc ) {
 				SEISCOMP_ERROR("%s.%s: location code '%s' not found",
 				               waveformID.networkCode().c_str(), waveformID.stationCode().c_str(),
 				               waveformID.locationCode().c_str());
@@ -883,7 +883,7 @@ bool App::initProcessor(Processing::WaveformProcessor *proc,
 			string c2 = waveformID.channelCode().substr(0, 2);
 
 			DataModel::getThreeComponents(chans, loc, c2.c_str(), time);
-			if ( chans.comps[DataModel::ThreeComponents::FirstHorizontal] != NULL ) {
+			if ( chans.comps[DataModel::ThreeComponents::FirstHorizontal] ) {
 				string channelCode1 = chans.comps[DataModel::ThreeComponents::FirstHorizontal]->code();
 				waveformID1 = waveformID;
 				waveformID1.setChannelCode(channelCode1);
@@ -894,7 +894,7 @@ bool App::initProcessor(Processing::WaveformProcessor *proc,
 				return false;
 			}
 
-			if ( chans.comps[DataModel::ThreeComponents::SecondHorizontal] != NULL ) {
+			if ( chans.comps[DataModel::ThreeComponents::SecondHorizontal] ) {
 				string channelCode2 = chans.comps[DataModel::ThreeComponents::SecondHorizontal]->code();
 				waveformID2 = waveformID;
 				waveformID2.setChannelCode(channelCode2);
@@ -927,7 +927,7 @@ bool App::initProcessor(Processing::WaveformProcessor *proc,
 					waveformID.networkCode(), waveformID.stationCode(), waveformID.locationCode(), time
 				);
 
-			if ( loc == NULL ) {
+			if ( !loc ) {
 				SEISCOMP_ERROR("%s.%s: location code '%s' not found",
 				               waveformID.networkCode().c_str(), waveformID.stationCode().c_str(),
 				               waveformID.locationCode().c_str());
@@ -937,7 +937,7 @@ bool App::initProcessor(Processing::WaveformProcessor *proc,
 			// Extract the first two characters of the channel code
 			string c2 = waveformID.channelCode().substr(0, 2);
 			DataModel::getThreeComponents(chans, loc, c2.c_str(), time);
-			if ( chans.comps[DataModel::ThreeComponents::Vertical] != NULL ) {
+			if ( chans.comps[DataModel::ThreeComponents::Vertical] ) {
 				string channelCode0 = chans.comps[DataModel::ThreeComponents::Vertical]->code();
 				waveformID0 = waveformID;
 				waveformID0.setChannelCode(channelCode0);
@@ -948,7 +948,7 @@ bool App::initProcessor(Processing::WaveformProcessor *proc,
 				return false;
 			}
 
-			if ( chans.comps[DataModel::ThreeComponents::FirstHorizontal] != NULL ) {
+			if ( chans.comps[DataModel::ThreeComponents::FirstHorizontal] ) {
 				string channelCode1 = chans.comps[DataModel::ThreeComponents::FirstHorizontal]->code();
 				waveformID1 = waveformID;
 				waveformID1.setChannelCode(channelCode1);
@@ -959,7 +959,7 @@ bool App::initProcessor(Processing::WaveformProcessor *proc,
 				return false;
 			}
 
-			if ( chans.comps[DataModel::ThreeComponents::SecondHorizontal] != NULL ) {
+			if ( chans.comps[DataModel::ThreeComponents::SecondHorizontal] ) {
 				string channelCode2 = chans.comps[DataModel::ThreeComponents::SecondHorizontal]->code();
 				waveformID2 = waveformID;
 				waveformID2.setChannelCode(channelCode2);
@@ -990,7 +990,7 @@ bool App::initProcessor(Processing::WaveformProcessor *proc,
 	                                            waveformID.networkCode(), waveformID.stationCode());
 	return proc->setup(Settings(configModuleName(), waveformID.networkCode(), waveformID.stationCode(),
 	                            waveformID.locationCode(), waveformID.channelCode(), &configuration(),
-	                            sc?sc->parameters.get():NULL));
+	                            sc?sc->parameters.get():nullptr));
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -1009,7 +1009,7 @@ bool App::initDetector(const string &streamID,
 
 	const StreamConfig *sc = _stationConfig.get(&configuration(), configModuleName(),
 	                                            waveformID.networkCode(), waveformID.stationCode());
-	if ( sc != NULL ) {
+	if ( sc ) {
 		if ( !sc->enabled ) {
 			SEISCOMP_INFO("Detector on station %s.%s disabled by config",
 			              waveformID.networkCode().c_str(), waveformID.stationCode().c_str());
@@ -1309,7 +1309,7 @@ void App::addSecondaryPicker(const Core::Time &onset, const Record *rec, const s
 		for ( auto it = list.begin(); it != list.end(); ) {
 			if ( it->dataEndTime <= onset ) {
 				SEISCOMP_DEBUG("Remove expired proc %p", static_cast<void*>(it->proc));
-				if ( /*it->proc != NULL*/true ) {
+				if ( /*it->proc*/true ) {
 					SEISCOMP_INFO("Remove expired running processor %s on %s",
 					              it->proc->className(), rec->streamID().c_str());
 
@@ -1479,11 +1479,7 @@ void App::emitPPick(const Processing::Picker *proc,
 		}
 	}
 
-	Core::Time now = Core::Time::UTC();
-	DataModel::CreationInfo ci;
-	ci.setCreationTime(now);
-	ci.setAgencyID(agencyID());
-	ci.setAuthor(author());
+	auto ci = generateCreationInfo();
 	pick->setCreationInfo(ci);
 
 	if ( res.polarity ) {
@@ -1635,22 +1631,20 @@ void App::emitSPick(const Processing::SecondaryPicker *proc,
 		}
 	}
 
-	Core::Time now = Core::Time::UTC();
-	DataModel::CreationInfo ci;
-	ci.setCreationTime(now);
-	ci.setAgencyID(agencyID());
-	ci.setAuthor(author());
-	pick->setCreationInfo(ci);
+	pick->setCreationInfo(generateCreationInfo());
 
 	DataModel::TimeQuantity pickTime(res.time);
 	if ( res.timeLowerUncertainty >= 0 && res.timeUpperUncertainty >= 0 &&
-	     res.timeLowerUncertainty == res.timeUpperUncertainty )
+	     res.timeLowerUncertainty == res.timeUpperUncertainty ) {
 		pickTime.setUncertainty(res.timeUpperUncertainty);
+	}
 	else {
-		if ( res.timeLowerUncertainty >= 0 )
+		if ( res.timeLowerUncertainty >= 0 ) {
 			pickTime.setLowerUncertainty(res.timeLowerUncertainty);
-		if ( res.timeUpperUncertainty >= 0 )
+		}
+		if ( res.timeUpperUncertainty >= 0 ) {
 			pickTime.setUpperUncertainty(res.timeUpperUncertainty);
+		}
 	}
 
 	pick->setTime(pickTime);
@@ -1677,8 +1671,8 @@ void App::emitSPick(const Processing::SecondaryPicker *proc,
 	}
 
 	if ( _config.featureExtractionType.empty()
-	  || !addFeatureExtractor(pick.get(), NULL, res.record, false) ) {
-		sendPick(pick.get(), NULL, res.record, false);
+	  || !addFeatureExtractor(pick.get(), nullptr, res.record, false) ) {
+		sendPick(pick.get(), nullptr, res.record, false);
 		SEISCOMP_DEBUG("%s: emit S pick %s", res.record->streamID().c_str(), pick->publicID().c_str());
 	}
 }
@@ -1698,7 +1692,7 @@ void App::emitDetection(const Processing::Detector *proc, const Record *rec, con
 	}
 
 	bool isDetection = !_config.pickerType.empty() && _config.sendDetections;
-	Core::Time now = Core::Time::UTC();
+
 	DataModel::PickPtr pick;
 	if ( _config.generateSimplifiedIDs ) {
 		pick = DataModel::Pick::Create(time.toString("%Y%m%d.%H%M%S.%f-") + rec->streamID());
@@ -1712,11 +1706,7 @@ void App::emitDetection(const Processing::Detector *proc, const Record *rec, con
 		);
 	}
 
-	DataModel::CreationInfo ci;
-	ci.setCreationTime(now);
-	ci.setAgencyID(agencyID());
-	ci.setAuthor(author());
-	pick->setCreationInfo(ci);
+	pick->setCreationInfo(generateCreationInfo());
 	pick->setTime(time);
 	pick->setMethodID(proc->methodID());
 	if ( !_config.commentID.empty() && !_config.commentText.empty() ) {
@@ -1865,8 +1855,9 @@ void App::sendPick(Seiscomp::DataModel::Pick *pick, DataModel::Amplitude *amp,
 void App::emitAmplitude(const AmplitudeProcessor *ampProc,
                         const AmplitudeProcessor::Result &res) {
 
-	if ( _config.dumpRecords && _config.offline )
+	if ( _config.dumpRecords && _config.offline ) {
 		ampProc->writeData();
+	}
 
 	bool update = true;
 	DataModel::TimeWindow tw;
@@ -1875,7 +1866,7 @@ void App::emitAmplitude(const AmplitudeProcessor *ampProc,
 	tw.setEnd(res.time.end);
 
 	DataModel::AmplitudePtr amp = (DataModel::Amplitude*)ampProc->userData();
-	Core::Time now = Core::Time::UTC();
+	auto ci = generateCreationInfo();
 
 	if ( !amp ) {
 		if ( _config.generateSimplifiedIDs ) {
@@ -1895,12 +1886,7 @@ void App::emitAmplitude(const AmplitudeProcessor *ampProc,
 			return;
 		}
 
-		DataModel::CreationInfo ci;
-		ci.setCreationTime(now);
-		ci.setAgencyID(agencyID());
-		ci.setAuthor(author());
 		amp->setCreationInfo(ci);
-
 		amp->setPickID(ampProc->referencingPickID());
 		amp->setType(ampProc->type());
 		amp->setWaveformID(waveformStreamID(res.record));
@@ -1913,19 +1899,21 @@ void App::emitAmplitude(const AmplitudeProcessor *ampProc,
 	}
 	else {
 		try {
-			amp->creationInfo().setModificationTime(now);
+			amp->creationInfo().setModificationTime(ci.creationTime());
 		}
-		catch ( Core::ValueException &e ) {
-			DataModel::CreationInfo ci;
-			ci.setModificationTime(now);
+		catch ( Core::ValueException & ) {
 			amp->setCreationInfo(ci);
 		}
 	}
 
 	amp->setUnit(ampProc->unit());
 	amp->setTimeWindow(tw);
-	if ( res.period > 0 ) amp->setPeriod(DataModel::RealQuantity(res.period));
-	if ( res.snr >= 0 ) amp->setSnr(res.snr);
+	if ( res.period > 0 ) {
+		amp->setPeriod(DataModel::RealQuantity(res.period));
+	}
+	if ( res.snr >= 0 ) {
+		amp->setSnr(res.snr);
+	}
 	amp->setAmplitude(
 		DataModel::RealQuantity(
 			res.amplitude.value, Core::None,
@@ -1953,19 +1941,20 @@ void App::emitAmplitude(const AmplitudeProcessor *ampProc,
 #endif
 
 	SEISCOMP_DEBUG("Emit amplitude %s, proc = 0x%lx, %s", amp->publicID().c_str(), (long int)ampProc, ampProc->type().c_str());
-	logObject(_logAmps, now);
+	logObject(_logAmps, ci.creationTime());
 
 	if ( connection() && !_config.test ) {
 		DataModel::NotifierPtr n = new DataModel::Notifier("EventParameters", update?DataModel::OP_UPDATE:DataModel::OP_ADD, amp.get());
 		DataModel::NotifierMessagePtr m = new DataModel::NotifierMessage;
 		m->attach(n.get());
 		if ( !connection()->send(_config.amplitudeGroup, m.get()) && !update ) {
-			ampProc->setUserData(NULL);
+			ampProc->setUserData(nullptr);
 		}
 	}
 
-	if ( _ep )
+	if ( _ep ) {
 		_ep->add(amp.get());
+	}
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
